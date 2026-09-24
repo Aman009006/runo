@@ -37,6 +37,7 @@ function Collection({ onBack }) {
   const [actionType, setActionType] = useState(null);
 
   const [transactions, setTransactions] = useState([]);
+  const [transactionFilter, setTransactionFilter] = useState("main");
 
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
@@ -249,6 +250,15 @@ function Collection({ onBack }) {
       minute: "2-digit",
     });
   };
+
+  const filteredTransactions =
+  transactionFilter === "main"
+    ? transactions.filter(
+        (transaction) =>
+          transaction.type === "withdraw" ||
+          transaction.type === "deposit",
+      )
+    : transactions;
 
   return (
     <div
@@ -642,6 +652,65 @@ function Collection({ onBack }) {
                 </h2>
               </div>
 
+              <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    background: "#f1f5f9",
+    padding: "4px",
+    borderRadius: "10px",
+    marginLeft: "auto",
+    marginRight: "12px",
+  }}
+>
+  <button
+    onClick={() => setTransactionFilter("main")}
+    style={{
+      height: "34px",
+      padding: "0 14px",
+      border: "none",
+      borderRadius: "8px",
+      background:
+        transactionFilter === "main" ? "#fff" : "transparent",
+      color:
+        transactionFilter === "main" ? "#0f172a" : "#64748b",
+      fontWeight: 700,
+      fontSize: "13px",
+      boxShadow:
+        transactionFilter === "main"
+          ? "0 1px 3px rgba(15,23,42,.08)"
+          : "none",
+      cursor: "pointer",
+    }}
+  >
+    Главные
+  </button>
+
+  <button
+    onClick={() => setTransactionFilter("all")}
+    style={{
+      height: "34px",
+      padding: "0 14px",
+      border: "none",
+      borderRadius: "8px",
+      background:
+        transactionFilter === "all" ? "#fff" : "transparent",
+      color:
+        transactionFilter === "all" ? "#0f172a" : "#64748b",
+      fontWeight: 700,
+      fontSize: "13px",
+      boxShadow:
+        transactionFilter === "all"
+          ? "0 1px 3px rgba(15,23,42,.08)"
+          : "none",
+      cursor: "pointer",
+    }}
+  >
+    Все
+  </button>
+</div>
+
               <button
                 onClick={() => setIsHistoryOpen(false)}
                 style={{
@@ -659,7 +728,7 @@ function Collection({ onBack }) {
               </button>
             </div>
 
-            {transactions.length === 0 ? (
+          {filteredTransactions.length === 0 ? (
               <div
                 style={{
                   padding: "50px 20px",
@@ -671,7 +740,7 @@ function Collection({ onBack }) {
               </div>
             ) : (
               <div>
-                {transactions.map((transaction, index) => {
+                {filteredTransactions.map((transaction, index) => {
                   const isDeposit = transaction.type === "deposit";
 
                   return (
@@ -680,7 +749,7 @@ function Collection({ onBack }) {
                       style={{
                         padding: "18px 24px",
                         borderBottom:
-                          index !== transactions.length - 1
+                          index !== filteredTransactions.length - 1
                             ? "1px solid #f1f5f9"
                             : "none",
                         display: "flex",

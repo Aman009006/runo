@@ -11,7 +11,6 @@ import {
   CircleDollarSign,
   RotateCcwClock,
   Van,
-
 } from "lucide-react";
 
 import Cashier from "./Cashier";
@@ -21,6 +20,8 @@ import Expenses from "./Expenses";
 import Transfers from "./Transfers";
 import SalesHistory from "./SalesHistory";
 import Collection from "./Collection";
+import Amanat from "./Amanat";
+import Reports from "./Reports";
 const STORE_ID = "40b43662-2117-11f1-0a80-1cb200302c3c";
 
 const SHIFT_STORAGE_KEY = "moysklad_retail_shift_id";
@@ -79,7 +80,7 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(null);
   const [isReturnOpen, setIsReturnOpen] = useState(false);
-
+  const [isAmanatOpen, setIsAmanatOpen] = useState(false);
   const [useMockApi, setUseMockApi] = useState(false);
   const [isReservationsOpen, setIsReservationsOpen] = useState(false);
   const [products, setProducts] = useState([]);
@@ -331,11 +332,11 @@ function App() {
       icon: FileStack,
       onClick: () => setActiveTab("Отчет"),
     },
-        {
+    {
       title: "Аманат",
       description: "Таблица задолженности аманата",
       icon: Van,
-      onClick: () => setActiveTab("Аманат"),
+      onClick: () => setIsAmanatOpen(true),
     },
   ];
 
@@ -349,6 +350,12 @@ function App() {
         onBack={() => setIsReservationsOpen(false)}
       />
     );
+  }
+  if (activeTab === "Отчет") {
+    return <Reports onBack={() => setActiveTab(null)} />;
+  }
+  if (isAmanatOpen) {
+    return <Amanat onBack={() => setIsAmanatOpen(false)} />;
   }
 
   if (activeTab === "Отправка/Приход") {

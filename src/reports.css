@@ -1,0 +1,518 @@
+.reports-page {
+  min-height: 100vh;
+  background: #f5f7fa;
+  color: #0f172a;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+}
+
+.reports-container {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 28px;
+}
+
+.reports-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.reports-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.reports-title-wrap h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.reports-title-wrap p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.reports-back,
+.reports-refresh {
+  border: 0;
+  background: white;
+  color: #0f172a;
+  cursor: pointer;
+  border-radius: 12px;
+  transition: 0.2s ease;
+}
+
+.reports-back {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reports-back:hover,
+.reports-refresh:hover {
+  background: #e2e8f0;
+}
+
+.reports-refresh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  font-weight: 700;
+}
+
+.reports-refresh:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.reports-period {
+  background: white;
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 22px;
+  border: 1px solid #e2e8f0;
+}
+
+.reports-period-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.reports-period-buttons button {
+  border: 0;
+  background: transparent;
+  padding: 9px 15px;
+  border-radius: 9px;
+  color: #64748b;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.reports-period-buttons button:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.reports-period-buttons button.active {
+  background: #0f172a;
+  color: white;
+}
+
+.reports-date-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+}
+
+.reports-date-inputs input {
+  border: 1px solid #dbe1e8;
+  border-radius: 9px;
+  padding: 8px 10px;
+  color: #0f172a;
+  background: white;
+}
+
+.reports-error {
+  padding: 14px 16px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.reports-loading {
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #64748b;
+}
+
+.reports-spin {
+  animation: report-spin 0.9s linear infinite;
+}
+
+@keyframes report-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* CARDS */
+
+.reports-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.report-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px;
+  min-height: 130px;
+}
+
+.report-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.report-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.report-card-value {
+  margin-top: 18px;
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.report-card-description {
+  margin-top: 5px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.report-card.balance {
+  border-color: #cbd5e1;
+}
+
+.report-card.income .report-card-icon {
+  color: #15803d;
+  background: #f0fdf4;
+}
+
+.report-card.expense .report-card-icon {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+/* PANELS */
+
+.reports-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.report-panel {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 18px;
+}
+
+.reports-grid .report-panel {
+  margin-bottom: 0;
+}
+
+.report-panel-wide {
+  grid-column: 1 / -1;
+}
+
+.report-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.report-panel-header h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.report-panel-header p {
+  margin: 5px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+/* LINE CHART */
+
+.report-line-chart {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.report-line-chart svg {
+  width: 100%;
+  min-width: 600px;
+  height: 300px;
+  overflow: visible;
+}
+
+.chart-axis {
+  stroke: #e2e8f0;
+  stroke-width: 1;
+}
+
+.chart-line {
+  stroke: #0f172a;
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-point {
+  fill: white;
+  stroke: #0f172a;
+  stroke-width: 2;
+}
+
+.chart-labels {
+  min-width: 600px;
+  display: flex;
+  justify-content: space-between;
+  color: #94a3b8;
+  font-size: 11px;
+  padding: 0 20px;
+}
+
+.report-empty-chart {
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* BARS */
+
+.report-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.report-bar-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 110px;
+  align-items: center;
+  gap: 12px;
+}
+
+.report-bar-name {
+  color: #475569;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.report-bar-track {
+  height: 10px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.report-bar-fill {
+  height: 100%;
+  background: #0f172a;
+  border-radius: 999px;
+}
+
+.report-bar-value {
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+/* TABLE */
+
+.daily-table-wrapper {
+  overflow-x: auto;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+.report-table th {
+  text-align: left;
+  padding: 12px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.report-table td {
+  padding: 13px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+  color: #334155;
+}
+
+.report-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.positive {
+  color: #15803d !important;
+  font-weight: 700;
+}
+
+.negative {
+  color: #dc2626 !important;
+  font-weight: 700;
+}
+
+.table-empty {
+  text-align: center !important;
+  color: #94a3b8 !important;
+  padding: 35px !important;
+}
+
+/* BADGES */
+
+.report-type {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.report-type-sale,
+.report-type-reservation,
+.report-type-deposit {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.report-type-withdraw,
+.report-type-return,
+.report-type-Rashod,
+.report-type-expense,
+.report-type-buyFromPostavshik {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* FILES */
+
+.report-files {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.report-files > div {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 13px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.report-files span {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.report-files b {
+  font-size: 14px;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 1200px) {
+  .reports-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .report-files {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .reports-container {
+    padding: 16px;
+  }
+
+  .reports-header {
+    align-items: flex-start;
+  }
+
+  .reports-period {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reports-period-buttons {
+    overflow-x: auto;
+  }
+
+  .reports-date-inputs {
+    width: 100%;
+  }
+
+  .reports-date-inputs input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .reports-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .reports-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .report-panel-wide {
+    grid-column: auto;
+  }
+
+  .report-files {
+    grid-template-columns: 1fr 1fr;
+  }
+}

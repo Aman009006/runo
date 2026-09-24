@@ -1,0 +1,603 @@
+
+.amanat-page {
+  min-height: 100vh;
+  background: #f8fafc;
+  color: #0f172a;
+  padding: 32px;
+}
+
+.amanat-container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* HEADER */
+
+.amanat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.amanat-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.amanat-header h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.amanat-header p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.amanat-back-button,
+.amanat-refresh-button,
+.amanat-month-button,
+.amanat-close-details {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.amanat-back-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+
+.amanat-refresh-button {
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  gap: 8px;
+  font-weight: 650;
+}
+
+.amanat-refresh-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.amanat-spin {
+  animation: amanat-spin 1s linear infinite;
+}
+
+@keyframes amanat-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* FILTERS */
+
+.amanat-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  margin-bottom: 20px;
+}
+
+.amanat-date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.amanat-date-field label {
+  font-size: 12px;
+  font-weight: 650;
+  color: #64748b;
+}
+
+.amanat-date-field input {
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  outline: none;
+  color: #0f172a;
+  background: #fff;
+}
+
+.amanat-date-field input:focus {
+  border-color: #2563eb;
+}
+
+.amanat-apply-button,
+.amanat-current-button {
+  height: 42px;
+  border-radius: 10px;
+  padding: 0 16px;
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.amanat-apply-button {
+  border: none;
+  background: #0f172a;
+  color: #fff;
+}
+
+.amanat-apply-button:disabled {
+  opacity: 0.6;
+}
+
+.amanat-current-button {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+}
+
+/* ERROR */
+
+.amanat-error {
+  padding: 14px 16px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.amanat-error button {
+  border: none;
+  background: transparent;
+  color: #b91c1c;
+  font-weight: 650;
+}
+
+/* SUMMARY */
+
+.amanat-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px;
+  margin-bottom: 20px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+}
+
+.amanat-summary-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 15px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.amanat-summary-content {
+  flex: 1;
+}
+
+.amanat-summary-label {
+  color: #64748b;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.amanat-summary-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.amanat-summary-count {
+  text-align: right;
+  color: #64748b;
+}
+
+.amanat-summary-count span {
+  display: block;
+  font-size: 22px;
+  font-weight: 750;
+  color: #0f172a;
+}
+
+.amanat-summary-count small {
+  font-size: 12px;
+}
+
+/* CALENDAR */
+
+.amanat-calendar-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+}
+
+.amanat-calendar-header {
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.amanat-month-title {
+  min-width: 210px;
+  text-align: center;
+  text-transform: capitalize;
+  font-size: 19px;
+  font-weight: 750;
+}
+
+.amanat-month-button {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+.amanat-month-button:hover,
+.amanat-back-button:hover {
+  background: #f8fafc;
+}
+
+.amanat-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.amanat-weekdays div {
+  padding: 12px;
+  text-align: center;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.amanat-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.amanat-calendar-cell {
+  min-height: 125px;
+  border: none;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+  padding: 12px;
+  text-align: left;
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.amanat-calendar-cell:nth-child(7n) {
+  border-right: none;
+}
+
+.amanat-calendar-cell:hover {
+  background: #f8fafc;
+}
+
+.amanat-calendar-cell.empty {
+  background: #fafafa;
+  cursor: default;
+}
+
+.amanat-calendar-cell.outside-period {
+  opacity: 0.45;
+}
+
+.amanat-day-number {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.amanat-calendar-cell.today .amanat-day-number {
+  background: #0f172a;
+  color: #fff;
+}
+
+.amanat-calendar-cell.has-amanat {
+  background: #f0fdf4;
+}
+
+.amanat-calendar-cell.has-amanat:hover {
+  background: #dcfce7;
+}
+
+.amanat-calendar-cell.selected {
+  box-shadow: inset 0 0 0 2px #2563eb;
+  background: #eff6ff;
+}
+
+.amanat-day-amount {
+  margin-top: 12px;
+  font-size: 17px;
+  font-weight: 800;
+  color: #166534;
+}
+
+.amanat-day-count {
+  margin-top: 5px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* DETAILS */
+
+.amanat-day-details {
+  margin-top: 20px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.amanat-details-header {
+  padding: 20px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.amanat-details-header h2 {
+  margin: 0;
+  font-size: 19px;
+  text-transform: capitalize;
+}
+
+.amanat-details-header p {
+  margin: 5px 0 0;
+  font-size: 15px;
+  font-weight: 750;
+  color: #166534;
+}
+
+.amanat-close-details {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.amanat-operation-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.amanat-operation {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 17px 22px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.amanat-operation:last-child {
+  border-bottom: none;
+}
+
+.amanat-operation-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: #f1f5f9;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.amanat-operation-main {
+  flex: 1;
+}
+
+.amanat-operation-title {
+  font-weight: 750;
+  font-size: 14px;
+}
+
+.amanat-operation-customer {
+  margin-top: 3px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.amanat-operation-phone {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.amanat-operation-right {
+  text-align: right;
+}
+
+.amanat-operation-right strong {
+  display: block;
+  font-size: 16px;
+  color: #166534;
+}
+
+.amanat-operation-right span {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* EMPTY */
+
+.amanat-empty {
+  margin-top: 20px;
+  padding: 55px 20px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  text-align: center;
+  color: #94a3b8;
+}
+
+.amanat-empty svg {
+  margin-bottom: 12px;
+}
+
+.amanat-empty h3 {
+  margin: 0;
+  color: #334155;
+  font-size: 17px;
+}
+
+.amanat-empty p {
+  max-width: 500px;
+  margin: 8px auto 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 800px) {
+  .amanat-page {
+    padding: 16px;
+  }
+
+  .amanat-header {
+    align-items: flex-start;
+  }
+
+  .amanat-header h1 {
+    font-size: 25px;
+  }
+
+  .amanat-filters {
+    flex-wrap: wrap;
+  }
+
+  .amanat-date-field {
+    flex: 1;
+    min-width: 140px;
+  }
+
+  .amanat-apply-button,
+  .amanat-current-button {
+    flex: 1;
+  }
+
+  .amanat-calendar-cell {
+    min-height: 90px;
+    padding: 8px;
+  }
+
+  .amanat-day-amount {
+    font-size: 12px;
+    margin-top: 8px;
+  }
+
+  .amanat-day-count {
+    font-size: 9px;
+  }
+
+  .amanat-summary-value {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 550px) {
+  .amanat-refresh-button {
+    width: 44px;
+    padding: 0;
+  }
+
+  .amanat-refresh-button {
+    font-size: 0;
+  }
+
+  .amanat-refresh-button svg {
+    margin: 0;
+  }
+
+  .amanat-calendar-cell {
+    min-height: 75px;
+  }
+
+  .amanat-day-number {
+    width: 25px;
+    height: 25px;
+    font-size: 12px;
+  }
+
+  .amanat-day-amount {
+    font-size: 10px;
+  }
+
+  .amanat-day-count {
+    display: none;
+  }
+
+  .amanat-summary-count {
+    display: none;
+  }
+}
+
+.amanat-operation-products {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.amanat-operation-product {
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.amanat-operation-product-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.amanat-operation-product-quantity {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #64748b;
+}
