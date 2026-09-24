@@ -13,6 +13,8 @@ import {
   Banknote,
   CreditCard,
 } from "lucide-react";
+import API_URL from "./config.js";
+
 
 function Return({ products, loading, error, onClose, onRefresh }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -137,7 +139,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/moysklad/returns",
+        `${API_URL}/api/moysklad/returns`,
         {
           method: "POST",
           headers: {

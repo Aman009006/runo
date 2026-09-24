@@ -19,7 +19,8 @@ import {
 
 import "./transfers.css";
 
-const API_URL = "http://localhost:5000";
+import API_URL from "./config.js";
+
 
 const STORE_ID = "40b43662-2117-11f1-0a80-1cb200302c3c";
 

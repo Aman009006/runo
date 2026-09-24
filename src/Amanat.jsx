@@ -13,8 +13,8 @@ import {
 } from "lucide-react";
 
 import "./amanat.css";
+import API_URL from "./config.js";
 
-const API_URL = "http://localhost:5000";
 
 function formatDate(date) {
   const year = date.getFullYear();

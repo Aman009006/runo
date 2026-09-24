@@ -13,8 +13,8 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
 } from "lucide-react";
+import API_URL from "./config.js";
 
-const API_URL = "http://localhost:5000";
 
 function formatMoney(value) {
   return new Intl.NumberFormat("ru-RU", {

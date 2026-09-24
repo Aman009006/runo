@@ -12,6 +12,7 @@ import {
   RotateCcwClock,
   Van,
 } from "lucide-react";
+import API_URL from "./config.js";
 
 import Cashier from "./Cashier";
 import Return from "./Return";
@@ -107,7 +108,7 @@ function App() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/moysklad/products?storeId=${STORE_ID}`,
+        `${API_URL}/api/moysklad/products?storeId=${STORE_ID}`,
       );
 
       if (!response.ok) {
@@ -157,7 +158,7 @@ function App() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/moysklad/retail-shift/open",
+        `${API_URL}/api/moysklad/retail-shift/open`,
         {
           method: "POST",
           headers: {
@@ -219,7 +220,7 @@ function App() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/moysklad/retail-shift/close",
+        `${API_URL}/api/moysklad/retail-shift/close`,
         {
           method: "POST",
           headers: {

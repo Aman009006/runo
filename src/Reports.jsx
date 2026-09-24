@@ -15,7 +15,8 @@ import {
 
 import "./reports.css";
 
-const API_URL = "http://localhost:5000";
+import API_URL from "./config.js";
+
 
 function formatMoney(value) {
   return `${new Intl.NumberFormat("ru-RU").format(

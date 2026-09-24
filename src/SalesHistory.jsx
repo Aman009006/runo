@@ -10,7 +10,8 @@ import {
   Clock,
 } from "lucide-react";
 
-const API_URL = "http://localhost:5000";
+import API_URL from "./config.js";
+
 
 function getToday() {
   const date = new Date();

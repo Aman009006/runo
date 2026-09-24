@@ -3,8 +3,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Plus, Trash2, Wallet, X, CalendarDays } from "lucide-react";
 
 import "./expenses.css";
+import API_URL from "./config.js";
 
-const API_URL = "http://localhost:5000";
 
 const DEFAULT_CATEGORIES = [
   "Аренда",

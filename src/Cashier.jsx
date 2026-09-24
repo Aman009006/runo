@@ -13,6 +13,7 @@ import {
   Barcode,
   Receipt,
 } from "lucide-react";
+import API_URL from "./config.js";
 
 const SHIFT_STORAGE_KEY = "moysklad_retail_shift_id";
 
@@ -54,7 +55,7 @@ function Cashier({
 
       try {
         const response = await fetch(
-          "http://localhost:5000/api/moysklad/salespersons"
+          `${API_URL}/api/moysklad/salespersons`
         );
 
         const data = await response.json();
@@ -447,7 +448,7 @@ function Cashier({
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/moysklad/sales",
+        `${API_URL}/api/moysklad/sales`,
         {
           method: "POST",
 
