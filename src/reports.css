@@ -516,3 +516,45 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+.report-sales-total {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.report-sales-payment {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 10px;
+}
+
+.report-sales-payment-row {
+  width: 100%;
+}
+
+.report-sales-payment-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 8px;
+}
+
+.report-sales-payment-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.report-sales-payment-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.report-sales-payment-percent {
+  margin-top: 5px;
+  font-size: 13px;
+  color: #64748b;
+}

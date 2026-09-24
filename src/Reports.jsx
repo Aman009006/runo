@@ -17,10 +17,9 @@ import "./reports.css";
 
 import API_URL from "./config.js";
 
-
 function formatMoney(value) {
   return `${new Intl.NumberFormat("ru-RU").format(
-    Math.round(Number(value) || 0)
+    Math.round(Number(value) || 0),
   )} сом`;
 }
 
@@ -89,9 +88,7 @@ function TypeBadge({ type }) {
 function BarChart({ data }) {
   if (!data.length) {
     return (
-      <div className="report-empty-chart">
-        Нет данных за выбранный период
-      </div>
+      <div className="report-empty-chart">Нет данных за выбранный период</div>
     );
   }
 
@@ -100,18 +97,147 @@ function BarChart({ data }) {
   return (
     <div className="report-bars">
       {data.map((item) => {
-        const percent = Math.max(
-          4,
-          (item.value / max) * 100
-        );
+        const percent = Math.max(4, (item.value / max) * 100);
 
         return (
-          <div
-            className="report-bar-row"
-            key={item.name}
-          >
-            <div className="report-bar-name">
-              {item.name}
+          <div className="report-bar-row" key={item.name}>
+            <div className="report-bar-name">{item.name}</div>
+
+            <div className="report-bar-track">
+              <div
+                className="report-bar-fill"
+                style={{
+                  width: `${percent}%`,
+                }}
+              />
+            </div>
+
+            <div className="report-bar-value">{formatMoney(item.value)}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// function LineChart({ data }) {
+//   if (!data.length) {
+//     return (
+//       <div className="report-empty-chart">
+//         Нет данных за выбранный период
+//       </div>
+//     );
+//   }
+
+//   const width = 900;
+//   const height = 300;
+//   const padding = 35;
+
+//   const values = data.map((item) => item.net);
+
+//   const max = Math.max(...values, 0);
+//   const min = Math.min(...values, 0);
+
+//   const range = Math.max(max - min, 1);
+
+//   const points = data
+//     .map((item, index) => {
+//       const x =
+//         data.length === 1
+//           ? width / 2
+//           : padding +
+//             (index / (data.length - 1)) *
+//               (width - padding * 2);
+
+//       const y =
+//         height -
+//         padding -
+//         ((item.net - min) / range) *
+//           (height - padding * 2);
+
+//       return `${x},${y}`;
+//     })
+//     .join(" ");
+
+//   return (
+//     <div className="report-line-chart">
+//       <svg
+//         viewBox={`0 0 ${width} ${height}`}
+//         preserveAspectRatio="none"
+//       >
+//         <line
+//           x1={padding}
+//           y1={height - padding}
+//           x2={width - padding}
+//           y2={height - padding}
+//           className="chart-axis"
+//         />
+
+//         <polyline
+//           points={points}
+//           fill="none"
+//           className="chart-line"
+//         />
+
+//         {data.map((item, index) => {
+//           const x =
+//             data.length === 1
+//               ? width / 2
+//               : padding +
+//                 (index / (data.length - 1)) *
+//                   (width - padding * 2);
+
+//           const y =
+//             height -
+//             padding -
+//             ((item.net - min) / range) *
+//               (height - padding * 2);
+
+//           return (
+//             <circle
+//               key={item.date}
+//               cx={x}
+//               cy={y}
+//               r="4"
+//               className="chart-point"
+//             />
+//           );
+//         })}
+//       </svg>
+
+//       <div className="chart-labels">
+//         {data.map((item) => (
+//           <span key={item.date}>
+//             {item.date.slice(5)}
+//           </span>
+//         ))}
+//       </div>
+//     </div>
+//   );
+// }
+
+function SalesByPaymentChart({ data }) {
+  if (!data.length) {
+    return (
+      <div className="report-empty-chart">Нет продаж за выбранный период</div>
+    );
+  }
+
+  const max = Math.max(...data.map((item) => item.value), 1);
+
+  return (
+    <div className="report-sales-payment">
+      {data.map((item) => {
+        const percent = Math.max(4, (item.value / max) * 100);
+
+        return (
+          <div className="report-sales-payment-row" key={item.name}>
+            <div className="report-sales-payment-top">
+              <span className="report-sales-payment-name">{item.name}</span>
+
+              <span className="report-sales-payment-value">
+                {formatMoney(item.value)}
+              </span>
             </div>
 
             <div className="report-bar-track">
@@ -123,8 +249,8 @@ function BarChart({ data }) {
               />
             </div>
 
-            <div className="report-bar-value">
-              {formatMoney(item.value)}
+            <div className="report-sales-payment-percent">
+              {item.percent.toFixed(1)}%
             </div>
           </div>
         );
@@ -133,109 +259,7 @@ function BarChart({ data }) {
   );
 }
 
-function LineChart({ data }) {
-  if (!data.length) {
-    return (
-      <div className="report-empty-chart">
-        Нет данных за выбранный период
-      </div>
-    );
-  }
-
-  const width = 900;
-  const height = 300;
-  const padding = 35;
-
-  const values = data.map((item) => item.net);
-
-  const max = Math.max(...values, 0);
-  const min = Math.min(...values, 0);
-
-  const range = Math.max(max - min, 1);
-
-  const points = data
-    .map((item, index) => {
-      const x =
-        data.length === 1
-          ? width / 2
-          : padding +
-            (index / (data.length - 1)) *
-              (width - padding * 2);
-
-      const y =
-        height -
-        padding -
-        ((item.net - min) / range) *
-          (height - padding * 2);
-
-      return `${x},${y}`;
-    })
-    .join(" ");
-
-  return (
-    <div className="report-line-chart">
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        preserveAspectRatio="none"
-      >
-        <line
-          x1={padding}
-          y1={height - padding}
-          x2={width - padding}
-          y2={height - padding}
-          className="chart-axis"
-        />
-
-        <polyline
-          points={points}
-          fill="none"
-          className="chart-line"
-        />
-
-        {data.map((item, index) => {
-          const x =
-            data.length === 1
-              ? width / 2
-              : padding +
-                (index / (data.length - 1)) *
-                  (width - padding * 2);
-
-          const y =
-            height -
-            padding -
-            ((item.net - min) / range) *
-              (height - padding * 2);
-
-          return (
-            <circle
-              key={item.date}
-              cx={x}
-              cy={y}
-              r="4"
-              className="chart-point"
-            />
-          );
-        })}
-      </svg>
-
-      <div className="chart-labels">
-        {data.map((item) => (
-          <span key={item.date}>
-            {item.date.slice(5)}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ReportCard({
-  icon: Icon,
-  title,
-  value,
-  description,
-  type = "",
-}) {
+function ReportCard({ icon: Icon, title, value, description, type = "" }) {
   return (
     <div className={`report-card ${type}`}>
       <div className="report-card-top">
@@ -246,14 +270,10 @@ function ReportCard({
         <span>{title}</span>
       </div>
 
-      <div className="report-card-value">
-        {value}
-      </div>
+      <div className="report-card-value">{value}</div>
 
       {description && (
-        <div className="report-card-description">
-          {description}
-        </div>
+        <div className="report-card-description">{description}</div>
       )}
     </div>
   );
@@ -285,32 +305,24 @@ export default function Reports({ onBack }) {
       }
 
       const response = await fetch(
-        `${API_URL}/api/reports?${params.toString()}`
+        `${API_URL}/api/reports?${params.toString()}`,
       );
 
       if (!response.ok) {
-        throw new Error(
-          "Ошибка загрузки отчёта"
-        );
+        throw new Error("Ошибка загрузки отчёта");
       }
 
       const data = await response.json();
 
       if (!data.success) {
-        throw new Error(
-          data.message ||
-            "Ошибка загрузки отчёта"
-        );
+        throw new Error(data.message || "Ошибка загрузки отчёта");
       }
 
       setReport(data);
     } catch (err) {
       console.error(err);
 
-      setError(
-        err.message ||
-          "Не удалось загрузить отчёт"
-      );
+      setError(err.message || "Не удалось загрузить отчёт");
     } finally {
       setLoading(false);
     }
@@ -350,39 +362,68 @@ export default function Reports({ onBack }) {
   };
 
   const summary = report?.summary || {};
+  const salesByPayment = useMemo(() => {
+    const payments = report?.salesByPayment || {};
 
-  const daily = useMemo(
-    () => report?.daily || [],
-    [report]
-  );
+    const items = [
+      {
+        key: "cash",
+        name: "Наличные",
+        value: Number(payments.cash) || 0,
+      },
+      {
+        key: "card",
+        name: "Карта",
+        value: Number(payments.card) || 0,
+      },
+      {
+        key: "amanat",
+        name: "Аманат",
+        value: Number(payments.amanat) || 0,
+      },
+      {
+        key: "mplus",
+        name: "M+",
+        value: Number(payments.mplus) || 0,
+      },
+      {
+        key: "local",
+        name: "Локальная оплата",
+        value: Number(payments.local) || 0,
+      },
+    ];
+
+    const total = items.reduce((sum, item) => sum + item.value, 0);
+
+    return items
+      .filter((item) => item.value > 0)
+      .map((item) => ({
+        ...item,
+        percent: total > 0 ? (item.value / total) * 100 : 0,
+      }));
+  }, [report]);
+
+  const daily = useMemo(() => report?.daily || [], [report]);
 
   const expenseCategories = useMemo(
     () => report?.expensesByCategory || [],
-    [report]
+    [report],
   );
 
-  const operationTypes = useMemo(
-    () => report?.operationTypes || [],
-    [report]
-  );
+  const operationTypes = useMemo(() => report?.operationTypes || [], [report]);
 
   return (
     <div className="reports-page">
       <div className="reports-container">
         <header className="reports-header">
           <div className="reports-title-wrap">
-            <button
-              className="reports-back"
-              onClick={onBack}
-            >
+            <button className="reports-back" onClick={onBack}>
               <ArrowLeft size={20} />
             </button>
 
             <div>
               <h1>Отчёт</h1>
-              <p>
-                Финансовый отчёт и движение денег
-              </p>
+              <p>Финансовый отчёт и движение денег</p>
             </div>
           </div>
 
@@ -391,15 +432,7 @@ export default function Reports({ onBack }) {
             onClick={loadReport}
             disabled={loading}
           >
-            <RefreshCw
-              size={18}
-              className={
-                loading
-                  ? "reports-spin"
-                  : ""
-              }
-            />
-
+            <RefreshCw size={18} className={loading ? "reports-spin" : ""} />
             Обновить
           </button>
         </header>
@@ -407,53 +440,29 @@ export default function Reports({ onBack }) {
         <div className="reports-period">
           <div className="reports-period-buttons">
             <button
-              className={
-                period === "today"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                changePeriod("today")
-              }
+              className={period === "today" ? "active" : ""}
+              onClick={() => changePeriod("today")}
             >
               Сегодня
             </button>
 
             <button
-              className={
-                period === "7days"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                changePeriod("7days")
-              }
+              className={period === "7days" ? "active" : ""}
+              onClick={() => changePeriod("7days")}
             >
               7 дней
             </button>
 
             <button
-              className={
-                period === "30days"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                changePeriod("30days")
-              }
+              className={period === "30days" ? "active" : ""}
+              onClick={() => changePeriod("30days")}
             >
               30 дней
             </button>
 
             <button
-              className={
-                period === "all"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                changePeriod("all")
-              }
+              className={period === "all" ? "active" : ""}
+              onClick={() => changePeriod("all")}
             >
               Всё время
             </button>
@@ -484,19 +493,11 @@ export default function Reports({ onBack }) {
           </div>
         </div>
 
-        {error && (
-          <div className="reports-error">
-            {error}
-          </div>
-        )}
+        {error && <div className="reports-error">{error}</div>}
 
         {loading && !report ? (
           <div className="reports-loading">
-            <RefreshCw
-              size={26}
-              className="reports-spin"
-            />
-
+            <RefreshCw size={26} className="reports-spin" />
             Загрузка отчёта...
           </div>
         ) : (
@@ -505,9 +506,7 @@ export default function Reports({ onBack }) {
               <ReportCard
                 icon={Wallet}
                 title="Баланс кассы"
-                value={formatMoney(
-                  report?.balance
-                )}
+                value={formatMoney(report?.balance)}
                 description="Текущий баланс"
                 type="balance"
               />
@@ -515,9 +514,7 @@ export default function Reports({ onBack }) {
               <ReportCard
                 icon={TrendingUp}
                 title="Приход"
-                value={formatMoney(
-                  summary.income
-                )}
+                value={formatMoney(summary.income)}
                 description="Продажи + бронирования"
                 type="income"
               />
@@ -525,9 +522,7 @@ export default function Reports({ onBack }) {
               <ReportCard
                 icon={TrendingDown}
                 title="Расход"
-                value={formatMoney(
-                  summary.expenses
-                )}
+                value={formatMoney(summary.expenses)}
                 description="Расходы за период"
                 type="expense"
               />
@@ -535,47 +530,35 @@ export default function Reports({ onBack }) {
               <ReportCard
                 icon={ShoppingCart}
                 title="Продажи"
-                value={formatMoney(
-                  summary.sales
-                )}
+                value={formatMoney(summary.sales)}
                 description={`${summary.salesCount || 0} операций`}
               />
 
               <ReportCard
                 icon={CalendarDays}
                 title="Бронирования"
-                value={formatMoney(
-                  summary.reservations
-                )}
-                description={`${
-                  summary.reservationsCount || 0
-                } операций`}
+                value={formatMoney(summary.reservations)}
+                description={`${summary.reservationsCount || 0} операций`}
               />
 
               <ReportCard
                 icon={RotateCcw}
                 title="Возвраты"
-                value={formatMoney(
-                  summary.returns
-                )}
+                value={formatMoney(summary.returns)}
                 description={`${summary.returnsCount || 0} операций`}
               />
 
               <ReportCard
                 icon={Package}
                 title="Поставщики"
-                value={formatMoney(
-                  summary.supplierPayments
-                )}
+                value={formatMoney(summary.supplierPayments)}
                 description="Оплата поставщикам"
               />
 
               <ReportCard
                 icon={Banknote}
                 title="Чистое движение"
-                value={formatMoney(
-                  summary.netCashFlow
-                )}
+                value={formatMoney(summary.netCashFlow)}
                 description="Приход − расход"
               />
             </section>
@@ -584,61 +567,45 @@ export default function Reports({ onBack }) {
               <div className="report-panel report-panel-wide">
                 <div className="report-panel-header">
                   <div>
-                    <h2>
-                      Движение денег
-                    </h2>
+                    <h2>Всего продаж</h2>
 
-                    <p>
-                      Изменение чистого денежного
-                      потока по дням
-                    </p>
+                    <p>Продажи всеми способами оплаты</p>
+                  </div>
+
+                  <div className="report-sales-total">
+                    {formatMoney(summary.sales)}
                   </div>
                 </div>
 
-                <LineChart data={daily} />
+                <SalesByPaymentChart data={salesByPayment} />
               </div>
 
               <div className="report-panel">
                 <div className="report-panel-header">
                   <div>
-                    <h2>
-                      Расходы по категориям
-                    </h2>
+                    <h2>Расходы по категориям</h2>
 
-                    <p>
-                      Распределение расходов
-                    </p>
+                    <p>Распределение расходов</p>
                   </div>
                 </div>
 
-                <BarChart
-                  data={expenseCategories}
-                />
+                <BarChart data={expenseCategories} />
               </div>
 
               <div className="report-panel">
                 <div className="report-panel-header">
                   <div>
-                    <h2>
-                      Операции кассы
-                    </h2>
+                    <h2>Операции кассы</h2>
 
-                    <p>
-                      Типы операций за период
-                    </p>
+                    <p>Типы операций за период</p>
                   </div>
                 </div>
 
                 <BarChart
-                  data={operationTypes.map(
-                    (item) => ({
-                      ...item,
-                      name:
-                        TYPE_LABELS[
-                          item.name
-                        ] || item.name,
-                    })
-                  )}
+                  data={operationTypes.map((item) => ({
+                    ...item,
+                    name: TYPE_LABELS[item.name] || item.name,
+                  }))}
                 />
               </div>
             </section>
@@ -646,13 +613,9 @@ export default function Reports({ onBack }) {
             <section className="report-panel">
               <div className="report-panel-header">
                 <div>
-                  <h2>
-                    Движение по дням
-                  </h2>
+                  <h2>Движение по дням</h2>
 
-                  <p>
-                    Детальная статистика
-                  </p>
+                  <p>Детальная статистика</p>
                 </div>
               </div>
 
@@ -676,71 +639,46 @@ export default function Reports({ onBack }) {
                     {daily.length ? (
                       daily.map((item) => (
                         <tr key={item.date}>
-                          <td>
-                            {item.date}
+                          <td>{item.date}</td>
+
+                          <td className="positive">
+                            {formatMoney(item.sales)}
                           </td>
 
                           <td className="positive">
-                            {formatMoney(
-                              item.sales
-                            )}
+                            {formatMoney(item.reservations)}
+                          </td>
+
+                          <td className="negative">
+                            {formatMoney(item.expenses)}
+                          </td>
+
+                          <td className="negative">
+                            {formatMoney(item.returns)}
+                          </td>
+
+                          <td className="negative">
+                            {formatMoney(item.supplierPayments)}
                           </td>
 
                           <td className="positive">
-                            {formatMoney(
-                              item.reservations
-                            )}
+                            {formatMoney(item.deposits)}
                           </td>
 
                           <td className="negative">
-                            {formatMoney(
-                              item.expenses
-                            )}
-                          </td>
-
-                          <td className="negative">
-                            {formatMoney(
-                              item.returns
-                            )}
-                          </td>
-
-                          <td className="negative">
-                            {formatMoney(
-                              item.supplierPayments
-                            )}
-                          </td>
-
-                          <td className="positive">
-                            {formatMoney(
-                              item.deposits
-                            )}
-                          </td>
-
-                          <td className="negative">
-                            {formatMoney(
-                              item.withdraws
-                            )}
+                            {formatMoney(item.withdraws)}
                           </td>
 
                           <td
-                            className={
-                              item.net >= 0
-                                ? "positive"
-                                : "negative"
-                            }
+                            className={item.net >= 0 ? "positive" : "negative"}
                           >
-                            {formatMoney(
-                              item.net
-                            )}
+                            {formatMoney(item.net)}
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td
-                          colSpan="9"
-                          className="table-empty"
-                        >
+                        <td colSpan="9" className="table-empty">
                           Нет данных
                         </td>
                       </tr>
@@ -753,14 +691,9 @@ export default function Reports({ onBack }) {
             <section className="report-panel">
               <div className="report-panel-header">
                 <div>
-                  <h2>
-                    История операций
-                  </h2>
+                  <h2>История операций</h2>
 
-                  <p>
-                    Все операции кассы за выбранный
-                    период
-                  </p>
+                  <p>Все операции кассы за выбранный период</p>
                 </div>
               </div>
 
@@ -778,62 +711,31 @@ export default function Reports({ onBack }) {
 
                   <tbody>
                     {report?.transactions?.length ? (
-                      report.transactions.map(
-                        (transaction) => (
-                          <tr
-                            key={
-                              transaction.id
+                      report.transactions.map((transaction) => (
+                        <tr key={transaction.id}>
+                          <td>{formatDate(transaction.createdAt)}</td>
+
+                          <td>
+                            <TypeBadge type={transaction.type} />
+                          </td>
+
+                          <td
+                            className={
+                              transaction.amount >= 0 ? "positive" : "negative"
                             }
                           >
-                            <td>
-                              {formatDate(
-                                transaction.createdAt
-                              )}
-                            </td>
+                            {transaction.amount >= 0 ? "+" : ""}
+                            {formatMoney(transaction.amount)}
+                          </td>
 
-                            <td>
-                              <TypeBadge
-                                type={
-                                  transaction.type
-                                }
-                              />
-                            </td>
+                          <td>{transaction.responsible || "-"}</td>
 
-                            <td
-                              className={
-                                transaction.amount >=
-                                0
-                                  ? "positive"
-                                  : "negative"
-                              }
-                            >
-                              {transaction.amount >=
-                              0
-                                ? "+"
-                                : ""}
-                              {formatMoney(
-                                transaction.amount
-                              )}
-                            </td>
-
-                            <td>
-                              {transaction.responsible ||
-                                "-"}
-                            </td>
-
-                            <td>
-                              {transaction.comment ||
-                                "-"}
-                            </td>
-                          </tr>
-                        )
-                      )
+                          <td>{transaction.comment || "-"}</td>
+                        </tr>
+                      ))
                     ) : (
                       <tr>
-                        <td
-                          colSpan="5"
-                          className="table-empty"
-                        >
+                        <td colSpan="5" className="table-empty">
                           Нет операций
                         </td>
                       </tr>
@@ -842,7 +744,6 @@ export default function Reports({ onBack }) {
                 </table>
               </div>
             </section>
-
           </>
         )}
       </div>
