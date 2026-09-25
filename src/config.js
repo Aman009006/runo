@@ -1,3 +1,3 @@
-const API_URL = "https://runobackend.onrender.com";
+const API_URL = "https://frontend.edu.kg";
 
 export default API_URL;
