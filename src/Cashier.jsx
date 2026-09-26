@@ -217,6 +217,24 @@ function Cashier({
     });
   };
 
+  const updateItemPrice = (id, value) => {
+  // Разрешаем только числа и максимум 2 знака после запятой
+  if (!/^\d*(\.\d{0,2})?$/.test(value)) {
+    return;
+  }
+
+  setCart((prev) =>
+    prev.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            price: value,
+          }
+        : item
+    )
+  );
+};
+
   const removeFromCart = (id) => {
     setCart((prev) =>
       prev.filter((item) => item.id !== id)
@@ -1132,19 +1150,58 @@ function Cashier({
                           </div>
 
                           <div
-                            style={{
-                              marginTop:
-                                "4px",
-                              color:
-                                "#64748b",
-                              fontSize:
-                                "12px",
-                            }}
-                          >
-                            {formatMoney(
-                              item.price
-                            )}
-                          </div>
+  style={{
+    marginTop: "8px",
+  }}
+>
+  <div
+    style={{
+      fontSize: "11px",
+      color: "#64748b",
+      marginBottom: "4px",
+    }}
+  >
+    Цена за единицу
+  </div>
+
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "6px",
+    }}
+  >
+    <input
+      type="text"
+      inputMode="decimal"
+      value={item.price ?? ""}
+      onChange={(e) =>
+        updateItemPrice(item.id, e.target.value)
+      }
+      style={{
+        width: "110px",
+        height: "32px",
+        border: "1px solid #cbd5e1",
+        borderRadius: "7px",
+        padding: "0 8px",
+        outline: "none",
+        fontSize: "13px",
+        fontWeight: 600,
+        color: "#0f172a",
+        background: "#fff",
+      }}
+    />
+
+    <span
+      style={{
+        fontSize: "12px",
+        color: "#64748b",
+      }}
+    >
+      сом
+    </span>
+  </div>
+</div>
                         </div>
 
                         <button
