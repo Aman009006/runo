@@ -387,8 +387,10 @@ function App() {
     >
         <img src={runoLogo2} alt="Logo"style={{position: "absolute", bottom: "20px", left: "0px", maxWidth: "250px",zIndex: 1,
     pointerEvents: "none",}} />
-        <img src={runoLogo3} alt="Logo"style={{position: "absolute", bottom: "40vh", right: "0px", maxWidth: "350px", zIndex: 1,
-    pointerEvents: "none",}} />
+      <img src={runoLogo2} alt="Logo"style={{position: "absolute", bottom: "20px", right: "0px", maxWidth: "250px",zIndex: 1,
+    pointerEvents: "none", transform: "scaleX(-1)"}} />
+        {/* <img src={runoLogo3} alt="Logo"style={{position: "absolute", bottom: "40vh", right: "0px", maxWidth: "350px", zIndex: 1,
+    pointerEvents: "none",}} /> */}
       <div
         style={{
           maxWidth: "1400px",
