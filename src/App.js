@@ -24,6 +24,9 @@ import Collection from "./Collection";
 import Amanat from "./Amanat";
 import Reports from "./Reports";
 import runoLogo from "./runo.PNG";
+import runoLogo2 from "./runo2.png";
+import runoLogo3 from "./runo3.png";
+
 const STORE_ID = "40b43662-2117-11f1-0a80-1cb200302c3c";
 
 const SHIFT_STORAGE_KEY = "moysklad_retail_shift_id";
@@ -382,6 +385,10 @@ function App() {
         padding: "32px",
       }}
     >
+        <img src={runoLogo2} alt="Logo"style={{position: "absolute", bottom: "20px", left: "0px", maxWidth: "250px",zIndex: 1,
+    pointerEvents: "none",}} />
+        <img src={runoLogo3} alt="Logo"style={{position: "absolute", bottom: "40vh", right: "0px", maxWidth: "350px", zIndex: 1,
+    pointerEvents: "none",}} />
       <div
         style={{
           maxWidth: "1400px",
