@@ -39,6 +39,10 @@ const PAYMENT_METHODS = [
     key: "mplus",
     label: "MPlus",
   },
+  {
+    key: "online_qr",
+    label: "Онлайн QR",
+  },
 ];
 
 const PAYMENT_METHOD_OPTIONS = [
@@ -54,6 +58,7 @@ const emptyPayments = () => ({
   card: 0,
   amanat: 0,
   mplus: 0,
+  online_qr: 0,
 });
 
 function formatMoney(value) {
@@ -1379,7 +1384,7 @@ function Reservations({
   onBack,
 }) {
   const [currentMonth, setCurrentMonth] = useState(getMonthStart(new Date()));
-
+const [search, setSearch] = useState("");
   const [reservations, setReservations] = useState([]);
 
   const [loading, setLoading] = useState(true);
@@ -1395,6 +1400,47 @@ function Reservations({
   const [previewReservation, setPreviewReservation] = useState(null);
 
   const calendarDays = getCalendarDays(currentMonth);
+  const filteredReservations = useMemo(() => {
+  const value = search.trim().toLowerCase();
+
+  return reservations.filter((reservation) => {
+    const reservationDate = normalizeDateString(
+      reservation.reservationDate,
+    );
+
+    const date = new Date(`${reservationDate}T00:00:00`);
+
+    const sameMonthAndYear =
+      date.getFullYear() === currentMonth.getFullYear() &&
+      date.getMonth() === currentMonth.getMonth();
+
+    if (!sameMonthAndYear) {
+      return false;
+    }
+
+    if (!value) {
+      return true;
+    }
+
+    const customerName = String(
+      reservation.customerName || "",
+    ).toLowerCase();
+
+    const customerPhone = String(
+      reservation.customerPhone || "",
+    ).toLowerCase();
+
+    const comment = String(
+      reservation.comment || "",
+    ).toLowerCase();
+
+    return (
+      customerName.includes(value) ||
+      customerPhone.includes(value) ||
+      comment.includes(value)
+    );
+  });
+}, [reservations, search, currentMonth]);
 
   const loadReservations = async () => {
     setLoading(true);
@@ -1452,7 +1498,7 @@ function Reservations({
   const reservationsByDate = useMemo(() => {
     const result = {};
 
-    reservations.forEach((reservation) => {
+    filteredReservations.forEach((reservation) => {
       const dateString = normalizeDateString(reservation.reservationDate);
 
       if (!dateString) {
@@ -1467,7 +1513,7 @@ function Reservations({
     });
 
     return result;
-  }, [reservations]);
+  }, [filteredReservations]);
 
   const openCreate = (date) => {
     setEditingReservation(null);
@@ -1671,6 +1717,27 @@ function Reservations({
             </button>
           </div>
         )}
+
+        <div className="reservation-search">
+  <Search size={18} />
+
+  <input
+    type="text"
+    value={search}
+    onChange={(event) => setSearch(event.target.value)}
+    placeholder="Поиск по имени, номеру или комментарию..."
+  />
+
+  {search && (
+    <button
+      type="button"
+      onClick={() => setSearch("")}
+      className="reservation-search-clear"
+    >
+      <X size={16} />
+    </button>
+  )}
+</div>
 
         <div className="calendar-card">
           <div className="calendar-header">

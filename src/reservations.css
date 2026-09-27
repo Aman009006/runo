@@ -1297,3 +1297,56 @@
     flex: 1;
   }
 }
+.reservation-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 18px;
+  padding: 0 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  min-height: 46px;
+  box-sizing: border-box;
+}
+
+.reservation-search svg {
+  flex-shrink: 0;
+  color: #64748b;
+}
+
+.reservation-search input {
+  width: 100%;
+  height: 44px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.reservation-search input::placeholder {
+  color: #94a3b8;
+}
+
+.reservation-search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.reservation-search-clear:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}

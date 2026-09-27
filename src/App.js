@@ -23,6 +23,7 @@ import SalesHistory from "./SalesHistory";
 import Collection from "./Collection";
 import Amanat from "./Amanat";
 import Reports from "./Reports";
+import runoLogo from "./runo.PNG";
 const STORE_ID = "40b43662-2117-11f1-0a80-1cb200302c3c";
 
 const SHIFT_STORAGE_KEY = "moysklad_retail_shift_id";
@@ -404,7 +405,9 @@ function App() {
                 color: "#0f172a",
               }}
             >
-              МойСклад POS
+                <img src={runoLogo} alt="Logo"style={{
+                maxWidth: "200px",
+              }} />
             </h1>
 
             <p

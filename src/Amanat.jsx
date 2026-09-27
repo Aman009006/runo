@@ -626,11 +626,17 @@ function Amanat({ onBack }) {
                       {item.customerName}
                     </div>
 
+{item.comment && (
+                      <div className="amanat-operation-phone">
+                        {item.comment}
+                      </div>
+                    )}
                     {item.customerPhone && (
                       <div className="amanat-operation-phone">
                         {item.customerPhone}
                       </div>
                     )}
+                    
                     {Array.isArray(item.items) && item.items.length > 0 && (
   <div className="amanat-operation-products">
     {item.items.map((product, productIndex) => (

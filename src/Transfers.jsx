@@ -183,38 +183,65 @@ function Transfers({ onBack }) {
     loadData();
   }, []);
 
-  const addProduct = (product) => {
-    setItems((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
+const addProduct = (product) => {
+  setItems((prev) => {
+    const existing = prev.find((item) => item.id === product.id);
 
-      if (existing) {
-        return prev.map((item) =>
-          item.id === product.id
-            ? {
-                ...item,
-                quantity: Number(item.quantity) + 1,
-              }
-            : item,
-        );
-      }
+    if (existing) {
+      return prev.map((item) =>
+        item.id === product.id
+          ? {
+              ...item,
+              quantity: Number(item.quantity) + 1,
+            }
+          : item,
+      );
+    }
 
-      return [
-        ...prev,
-        {
-          id: product.id,
-          name: product.name,
-          article: product.article || "",
-          code: product.code || "",
-          price: Number(product.price || 0),
-          stock: Number(product.stock || 0),
-          quantity: 1,
+    // Себестоимость товара
+    const costPrice = Number(
+      product.costPrice ??
+        product.cost_price ??
+        product.purchasePrice ??
+        product.purchase_price ??
+        product.price ??
+        0,
+    );
 
-          // ВАЖНО
-          assortmentMeta: product.meta,
-        },
-      ];
-    });
-  };
+    return [
+      ...prev,
+      {
+        id: product.id,
+        name: product.name,
+        article: product.article || "",
+        code: product.code || "",
+
+        // Цена себестоимости
+        price: costPrice,
+
+        stock: Number(product.stock || 0),
+        quantity: 1,
+
+        assortmentMeta: product.meta,
+      },
+    ];
+  });
+};
+
+const updatePrice = (productId, price) => {
+  const value = Math.max(0, Number(price) || 0);
+
+  setItems((prev) =>
+    prev.map((item) =>
+      item.id === productId
+        ? {
+            ...item,
+            price: value,
+          }
+        : item,
+    ),
+  );
+};
 
   const updateQuantity = (productId, quantity) => {
     const value = Math.max(0, Number(quantity) || 0);
@@ -274,6 +301,7 @@ function Transfers({ onBack }) {
             name: item.name,
             quantity: Number(item.quantity),
             price: Number(item.price || 0),
+            costPrice: Number(item.price || 0),
           })),
         }),
       });
@@ -332,6 +360,7 @@ function Transfers({ onBack }) {
             name: item.name,
             quantity: Number(item.quantity),
             price: Number(item.price || 0),
+            costPrice: Number(item.price || 0),
           })),
         }),
       });
@@ -442,7 +471,12 @@ function Transfers({ onBack }) {
                       : "Без артикула"}
                 </span>
 
-                <small>Цена: {formatAmount(Number(product.price || 0))}</small>
+                <small>
+  Цена:{" "}
+  {formatAmount(
+    Number(product.costPrice ?? product.buyPrice ?? product.price ?? 0),
+  )}
+</small>
 
                 <small>Остаток: {product.stock ?? 0}</small>
               </div>
@@ -484,18 +518,30 @@ function Transfers({ onBack }) {
                 <div className="transfers-selected-info">
                   <strong>{item.name}</strong>
 
-                  {mode === "incoming" && receiptSource === "supplier" && (
-                    <>
-                      <span>Цена: {formatAmount(Number(item.price || 0))}</span>
+               {mode === "incoming" && receiptSource === "supplier" && (
+  <div className="transfers-supplier-price">
+    <label>Цена себестоимости за ед.</label>
 
-                      <span>
-                        Сумма:{" "}
-                        {formatAmount(
-                          Number(item.quantity || 0) * Number(item.price || 0),
-                        )}
-                      </span>
-                    </>
-                  )}
+    <div className="transfers-price-input">
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        value={item.price}
+        onChange={(e) => updatePrice(item.id, e.target.value)}
+      />
+
+      <span>сом</span>
+    </div>
+
+    <span className="transfers-item-total">
+      Сумма:{" "}
+      {formatAmount(
+        Number(item.quantity || 0) * Number(item.price || 0),
+      )}
+    </span>
+  </div>
+)}
 
                   <span>Остаток: {item.stock ?? 0}</span>
                 </div>

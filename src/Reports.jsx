@@ -365,33 +365,38 @@ export default function Reports({ onBack }) {
   const salesByPayment = useMemo(() => {
     const payments = report?.salesByPayment || {};
 
-    const items = [
-      {
-        key: "cash",
-        name: "Наличные",
-        value: Number(payments.cash) || 0,
-      },
-      {
-        key: "card",
-        name: "Карта",
-        value: Number(payments.card) || 0,
-      },
-      {
-        key: "amanat",
-        name: "Аманат",
-        value: Number(payments.amanat) || 0,
-      },
-      {
-        key: "mplus",
-        name: "M+",
-        value: Number(payments.mplus) || 0,
-      },
-      {
-        key: "local",
-        name: "Локальная оплата",
-        value: Number(payments.local) || 0,
-      },
-    ];
+ const items = [
+  {
+    key: "cash",
+    name: "Наличные",
+    value: Number(payments.cash) || 0,
+  },
+  {
+    key: "card",
+    name: "Карта",
+    value: Number(payments.card) || 0,
+  },
+  {
+    key: "amanat",
+    name: "Аманат",
+    value: Number(payments.amanat) || 0,
+  },
+  {
+    key: "mplus",
+    name: "M+",
+    value: Number(payments.mplus) || 0,
+  },
+  {
+    key: "online_qr",
+    name: "Онлайн QR",
+    value: Number(payments.online_qr) || 0,
+  },
+  {
+    key: "local",
+    name: "Локальная оплата",
+    value: Number(payments.local) || 0,
+  },
+];
 
     const total = items.reduce((sum, item) => sum + item.value, 0);
 
@@ -411,7 +416,60 @@ export default function Reports({ onBack }) {
   );
 
   const operationTypes = useMemo(() => report?.operationTypes || [], [report]);
+const clearAllData = async () => {
+  const password = window.prompt(
+    "Введите пароль для очистки всех данных:",
+  );
 
+  if (password === null) {
+    return;
+  }
+
+  if (password !== "аман159") {
+    window.alert("Неверный пароль");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    "ВНИМАНИЕ!\n\nВсе продажи, расходы, бронирования, возвраты и другие данные будут удалены.\n\nПродолжить?",
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    setLoading(true);
+    setError("");
+
+    const response = await fetch(
+      `${API_URL}/api/reports/clear`,
+      {
+        method: "DELETE",
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.message || "Не удалось очистить данные",
+      );
+    }
+
+    window.alert("Все данные успешно очищены");
+
+    await loadReport();
+  } catch (err) {
+    console.error(err);
+
+    setError(
+      err.message || "Не удалось очистить данные",
+    );
+
+    setLoading(false);
+  }
+};
   return (
     <div className="reports-page">
       <div className="reports-container">
@@ -747,6 +805,33 @@ export default function Reports({ onBack }) {
           </>
         )}
       </div>
+      <div
+  style={{
+    display: "flex",
+    justifyContent: "center",
+    marginTop: "30px",
+    paddingBottom: "20px",
+  }}
+>
+  <button
+    type="button"
+    onClick={clearAllData}
+    disabled={loading}
+    style={{
+      padding: "7px 14px",
+      border: "1px solid #dc2626",
+      borderRadius: "6px",
+      background: "#fff",
+      color: "#dc2626",
+      fontSize: "12px",
+      fontWeight: 600,
+      cursor: loading ? "not-allowed" : "pointer",
+      opacity: loading ? 0.5 : 1,
+    }}
+  >
+    Очистить все
+  </button>
+</div>
     </div>
   );
 }

@@ -14,13 +14,12 @@ import API_URL from "./config.js";
 
 
 function getToday() {
-  const date = new Date();
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bishkek",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 function formatDate(dateString) {
@@ -61,6 +60,7 @@ function getPaymentAmounts(payment = {}) {
     card: Number(payment.cardSom || 0),
     amanat: Number(payment.amanatSom || 0),
     mplus: Number(payment.mplusSom || 0),
+    online_qr: Number(payment.online_qrSom || 0),
   };
 }
 
@@ -100,6 +100,14 @@ function getPaymentMethods(payment = {}) {
       amount: amounts.mplus,
     });
   }
+
+  if (amounts.online_qr > 0) {
+  methods.push({
+    key: "online_qr",
+    name: "Онлайн QR",
+    amount: amounts.online_qr,
+  });
+}
 
   /*
    * Для старых продаж, где Som-поля отсутствуют,
@@ -145,6 +153,7 @@ function getSinglePaymentName(method) {
     mplus: "М+",
     credit: "Аманат",
     delivery: "М+",
+    online_qr: "Онлайн QR",
   };
 
   return names[method] || method || "Не указан";
@@ -279,7 +288,9 @@ function getSaleAmountForFilter(sale, filter) {
   if (filter === "mplus") {
     return amounts.mplus;
   }
-
+if (filter === "online_qr") {
+  return amounts.online_qr;
+}
   return 0;
 }
 
@@ -313,6 +324,25 @@ function formatTime(dateString) {
   });
 }
 
+function getSaleLocalDate(sale) {
+  if (!sale?.createdAt) {
+    return sale?.date || "";
+  }
+
+  const date = new Date(sale.createdAt);
+
+  if (Number.isNaN(date.getTime())) {
+    return sale?.date || "";
+  }
+
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bishkek",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
 function getPaymentFilterName(filter) {
   const names = {
     all: "Все способы",
@@ -320,6 +350,7 @@ function getPaymentFilterName(filter) {
     card: "Карта",
     amanat: "Аманат",
     mplus: "М+",
+     online_qr: "Онлайн QR",
     mixed: "Смешанная",
   };
 
@@ -401,51 +432,64 @@ export default function SalesHistory({ onBack }) {
     fetchSales();
   }, []);
 
-  const filteredSales = useMemo(() => {
-    if (!dateFrom || !dateTo) {
-      return [];
+const filteredSales = useMemo(() => {
+  if (!dateFrom || !dateTo) {
+    return [];
+  }
+
+  if (dateFrom > dateTo) {
+    return [];
+  }
+
+  const result = [];
+
+  Object.entries(salesByDate).forEach(([date, sales]) => {
+    if (!Array.isArray(sales)) {
+      return;
     }
 
-    if (dateFrom > dateTo) {
-      return [];
-    }
+    sales.forEach((sale) => {
+      // Определяем реальную дату продажи по времени Бишкек,
+      // а не по UTC-дате createdAt и не только по ключу byDate.
+      const saleLocalDate = getSaleLocalDate(sale);
 
-    const result = [];
-
-    Object.entries(salesByDate).forEach(([date, sales]) => {
-      if (date < dateFrom || date > dateTo) {
+      if (
+        !saleLocalDate ||
+        saleLocalDate < dateFrom ||
+        saleLocalDate > dateTo
+      ) {
         return;
       }
 
-      if (!Array.isArray(sales)) {
+      if (!matchesPaymentFilter(sale, paymentFilter)) {
         return;
       }
 
-      sales.forEach((sale) => {
-        if (!matchesPaymentFilter(sale, paymentFilter)) {
-          return;
-        }
+      const filteredAmount = getSaleAmountForFilter(
+        sale,
+        paymentFilter,
+      );
 
-        const filteredAmount = getSaleAmountForFilter(sale, paymentFilter);
+      result.push({
+        ...sale,
 
-        result.push({
-          ...sale,
-          date,
-          filteredAmount,
-        });
+        // Для отображения тоже используем локальную дату продажи.
+        date: saleLocalDate,
+
+        filteredAmount,
       });
     });
+  });
 
-    result.sort((a, b) => {
-      const dateA = new Date(a.createdAt || 0).getTime();
+  result.sort((a, b) => {
+    const dateA = new Date(a.createdAt || 0).getTime();
+    const dateB = new Date(b.createdAt || 0).getTime();
 
-      const dateB = new Date(b.createdAt || 0).getTime();
+    return dateB - dateA;
+  });
 
-      return dateB - dateA;
-    });
-
-    return result;
-  }, [salesByDate, dateFrom, dateTo, paymentFilter]);
+  return result;
+}, [salesByDate, dateFrom, dateTo, paymentFilter]);
 
   const totalSum = useMemo(() => {
     return filteredSales.reduce(
@@ -557,6 +601,7 @@ export default function SalesHistory({ onBack }) {
               <option value="amanat">Аманат</option>
 
               <option value="mplus">М+</option>
+              <option value="online_qr">Онлайн QR</option>
 
               <option value="mixed">Смешанная</option>
             </select>
@@ -763,6 +808,7 @@ export default function SalesHistory({ onBack }) {
                               card: "Карта",
                               amanat: "Аманат",
                               mplus: "М+",
+                                online_qr: "Онлайн QR",
                             }[paymentFilter]
                           }
                         </div>

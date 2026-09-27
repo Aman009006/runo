@@ -35,12 +35,13 @@ function Cashier({
 
   const [paymentMethod, setPaymentMethod] = useState("cash");
 
-  const [paymentAmounts, setPaymentAmounts] = useState({
-    cash: "",
-    card: "",
-    credit: "",
-    delivery: "",
-  });
+const [paymentAmounts, setPaymentAmounts] = useState({
+  cash: "",
+  card: "",
+  credit: "",
+  delivery: "",
+  online_qr: "",
+});
 
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [lastOrder, setLastOrder] = useState(null);
@@ -255,14 +256,15 @@ function Cashier({
 
   const totalSom = subtotalKopecks;
 
-  const mixedPaymentTotalSom = useMemo(() => {
-    return (
-      Number(paymentAmounts.cash || 0) +
-      Number(paymentAmounts.card || 0) +
-      Number(paymentAmounts.credit || 0) +
-      Number(paymentAmounts.delivery || 0)
-    );
-  }, [paymentAmounts]);
+ const mixedPaymentTotalSom = useMemo(() => {
+  return (
+    Number(paymentAmounts.cash || 0) +
+    Number(paymentAmounts.card || 0) +
+    Number(paymentAmounts.credit || 0) +
+    Number(paymentAmounts.delivery || 0) +
+    Number(paymentAmounts.online_qr || 0)
+  );
+}, [paymentAmounts]);
 
   const mixedPaymentRemainingSom =
     totalSom - mixedPaymentTotalSom;
@@ -330,50 +332,65 @@ function Cashier({
     setPaymentMethod(method);
   };
 
-  const getPaymentBreakdown = () => {
-    if (paymentMethod === "cash") {
-      return {
-        cash: totalSom,
-        card: 0,
-        credit: 0,
-        delivery: 0,
-      };
-    }
-
-    if (paymentMethod === "card") {
-      return {
-        cash: 0,
-        card: totalSom,
-        credit: 0,
-        delivery: 0,
-      };
-    }
-
-    if (paymentMethod === "credit") {
-      return {
-        cash: 0,
-        card: 0,
-        credit: totalSom,
-        delivery: 0,
-      };
-    }
-
-    if (paymentMethod === "delivery") {
-      return {
-        cash: 0,
-        card: 0,
-        credit: 0,
-        delivery: totalSom,
-      };
-    }
-
+const getPaymentBreakdown = () => {
+  if (paymentMethod === "cash") {
     return {
-      cash: Number(paymentAmounts.cash || 0),
-      card: Number(paymentAmounts.card || 0),
-      credit: Number(paymentAmounts.credit || 0),
-      delivery: Number(paymentAmounts.delivery || 0),
+      cash: totalSom,
+      card: 0,
+      credit: 0,
+      delivery: 0,
+      online_qr: 0,
     };
+  }
+
+  if (paymentMethod === "card") {
+    return {
+      cash: 0,
+      card: totalSom,
+      credit: 0,
+      delivery: 0,
+      online_qr: 0,
+    };
+  }
+
+  if (paymentMethod === "credit") {
+    return {
+      cash: 0,
+      card: 0,
+      credit: totalSom,
+      delivery: 0,
+      online_qr: 0,
+    };
+  }
+
+  if (paymentMethod === "delivery") {
+    return {
+      cash: 0,
+      card: 0,
+      credit: 0,
+      delivery: totalSom,
+      online_qr: 0,
+    };
+  }
+
+  if (paymentMethod === "online_qr") {
+    return {
+      cash: 0,
+      card: 0,
+      credit: 0,
+      delivery: 0,
+      online_qr: totalSom,
+    };
+  }
+
+  return {
+    cash: Number(paymentAmounts.cash || 0),
+    card: Number(paymentAmounts.card || 0),
+    credit: Number(paymentAmounts.credit || 0),
+    delivery: Number(paymentAmounts.delivery || 0),
+    online_qr: Number(paymentAmounts.online_qr || 0),
   };
+};
 
   const handleCheckout = async () => {
     if (cart.length === 0) {
@@ -405,23 +422,23 @@ function Cashier({
       Number(totalSom || 0) * 100
     );
 
-    const paymentInKopecks = {
-      cash: Math.round(
-        Number(payments.cash || 0) * 100
-      ),
-
-      card: Math.round(
-        Number(payments.card || 0) * 100
-      ),
-
-      amanat: Math.round(
-        Number(payments.delivery || 0) * 100
-      ),
-
-      mplus: Math.round(
-        Number(payments.credit || 0) * 100
-      ),
-    };
+const paymentInKopecks = {
+  cash: Math.round(
+    Number(payments.cash || 0) * 100
+  ),
+  card: Math.round(
+    Number(payments.card || 0) * 100
+  ),
+  amanat: Math.round(
+    Number(payments.delivery || 0) * 100
+  ),
+  mplus: Math.round(
+    Number(payments.credit || 0) * 100
+  ),
+  online_qr: Math.round(
+    Number(payments.online_qr || 0) * 100
+  ),
+};
 
     const selectedSeller = salespersons.find(
       (seller) =>
@@ -1499,13 +1516,14 @@ function Cashier({
                     gap: "7px",
                   }}
                 >
-                  {[
-                    ["cash", "Наличные"],
-                    ["card", "Карта"],
-                    ["credit", "В кредит"],
-                    ["delivery", "Аманат"],
-                    ["all", "Смешанная"],
-                  ].map(
+                 {[
+  ["cash", "Наличные"],
+  ["card", "Карта"],
+  ["credit", "В кредит"],
+  ["delivery", "Аманат"],
+  ["online_qr", "Онлайн QR"],
+  ["all", "Смешанная"],
+].map(
                     ([method, label]) => (
                       <button
                         key={method}
@@ -1592,6 +1610,7 @@ function Cashier({
                         "delivery",
                         "Аманат",
                       ],
+                        ["online_qr", "Онлайн QR"],
                     ].map(
                       ([method, label]) => (
                         <div
@@ -2056,6 +2075,7 @@ function Cashier({
                         "Кредит",
                       delivery:
                         "Аманат",
+                        online_qr: "Онлайн QR",
                     };
 
                     return (
