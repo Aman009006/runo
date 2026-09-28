@@ -49,6 +49,8 @@ function Transfers({ onBack }) {
 
   const [activeSection, setActiveSection] = useState("create");
 
+  const [supplierTotalAmount, setSupplierTotalAmount] = useState("");
+
   const currentWarehouse = useMemo(() => {
     return warehouses.find((warehouse) => warehouse.id === STORE_ID);
   }, [warehouses]);
@@ -92,12 +94,6 @@ function Transfers({ onBack }) {
 
   const totalQuantity = useMemo(() => {
     return items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-  }, [items]);
-  const supplierTotalAmount = useMemo(() => {
-    return items.reduce(
-      (sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0),
-      0,
-    );
   }, [items]);
 
   const formatAmount = (amount) => {
@@ -267,10 +263,11 @@ const updatePrice = (productId, price) => {
   };
 
   const resetForm = () => {
-    setItems([]);
-    setProductSearch("");
-    setSelectedSupplier("");
-  };
+  setItems([]);
+  setProductSearch("");
+  setSelectedSupplier("");
+  setSupplierTotalAmount("");
+};
 
   const createOutgoing = async () => {
     if (!selectedWarehouse) {
@@ -328,62 +325,79 @@ const updatePrice = (productId, price) => {
     }
   };
 
-  const createSupplierReceipt = async () => {
-    if (!selectedSupplier) {
-      setError("Выберите поставщика");
-      return;
+const createSupplierReceipt = async () => {
+  if (!selectedSupplier) {
+    setError("Выберите поставщика");
+    return;
+  }
+
+  if (items.length === 0) {
+    setError("Добавьте хотя бы один товар");
+    return;
+  }
+
+ const totalAmount =
+  supplierPaymentMethod === "debt"
+    ? 0
+    : Number(supplierTotalAmount);
+
+if (
+  supplierPaymentMethod === "cash" &&
+  (!Number.isFinite(totalAmount) || totalAmount <= 0)
+) {
+  setError("Введите общую сумму прихода");
+  return;
+}
+
+  setSaving(true);
+  setError("");
+
+  try {
+    const response = await fetch(`${API_URL}/api/transfers/receipt`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        storeId: STORE_ID,
+        supplierId: selectedSupplier,
+        totalAmount,
+
+        paymentMethod: supplierPaymentMethod,
+
+        items: items.map((item) => ({
+          assortmentId: item.id,
+          assortmentMeta: item.assortmentMeta,
+          name: item.name,
+          quantity: Number(item.quantity),
+
+          // Оставляем для совместимости с текущим backend,
+          // но пользователю эти цены больше не показываем.
+          price: Number(item.price || 0),
+          costPrice: Number(item.price || 0),
+        })),
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || "Не удалось оформить приход");
     }
 
-    if (items.length === 0) {
-      setError("Добавьте хотя бы один товар");
-      return;
-    }
+    alert(
+      `Приход оформлен.\nДокумент МойСклад: ${data.moyskladId || "создан"}`,
+    );
 
-    setSaving(true);
-    setError("");
-
-    try {
-      const response = await fetch(`${API_URL}/api/transfers/receipt`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          storeId: STORE_ID,
-          supplierId: selectedSupplier,
-          totalAmount: supplierTotalAmount,
-
-          paymentMethod: supplierPaymentMethod,
-          items: items.map((item) => ({
-            assortmentId: item.id,
-            assortmentMeta: item.assortmentMeta,
-            name: item.name,
-            quantity: Number(item.quantity),
-            price: Number(item.price || 0),
-            costPrice: Number(item.price || 0),
-          })),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || "Не удалось оформить приход");
-      }
-
-      alert(
-        `Приход оформлен.\nДокумент МойСклад: ${data.moyskladId || "создан"}`,
-      );
-
-      resetForm();
-      await loadData();
-    } catch (err) {
-      console.error(err);
-      setError(err.message || "Не удалось оформить приход");
-    } finally {
-      setSaving(false);
-    }
-  };
+    resetForm();
+    await loadData();
+  } catch (err) {
+    console.error(err);
+    setError(err.message || "Не удалось оформить приход");
+  } finally {
+    setSaving(false);
+  }
+};
 
   const confirmIncoming = async (transfer) => {
     if (
@@ -471,12 +485,12 @@ const updatePrice = (productId, price) => {
                       : "Без артикула"}
                 </span>
 
-                <small>
+                {/* <small>
   Цена:{" "}
   {formatAmount(
     Number(product.costPrice ?? product.buyPrice ?? product.price ?? 0),
   )}
-</small>
+</small> */}
 
                 <small>Остаток: {product.stock ?? 0}</small>
               </div>
@@ -517,7 +531,7 @@ const updatePrice = (productId, price) => {
               <div className="transfers-selected-item" key={item.id}>
                 <div className="transfers-selected-info">
                   <strong>{item.name}</strong>
-
+{/* 
                {mode === "incoming" && receiptSource === "supplier" && (
   <div className="transfers-supplier-price">
     <label>Цена себестоимости за ед.</label>
@@ -541,7 +555,7 @@ const updatePrice = (productId, price) => {
       )}
     </span>
   </div>
-)}
+)} */}
 
                   <span>Остаток: {item.stock ?? 0}</span>
                 </div>
@@ -816,44 +830,66 @@ const updatePrice = (productId, price) => {
         </div>
 
         <div className="transfers-footer">
-          <div>
-            <strong>{items.length} позиций</strong>
+  <div>
+    <strong>{items.length} позиций</strong>
 
-            <span>Количество: {totalQuantity}</span>
+    <span>Количество: {totalQuantity}</span>
+  </div>
 
-            <strong>Сумма: {formatAmount(supplierTotalAmount)}</strong>
-          </div>
+ {supplierPaymentMethod === "cash" && (
+  <div className="transfers-total-input">
+    <label>Общая сумма прихода</label>
 
-          <div className="transfers-payment-select ">
-            <select
-              value={supplierPaymentMethod}
-              onChange={(e) => setSupplierPaymentMethod(e.target.value)}
-              className="transfers-primary-button"
-            >
-              <option value="cash">Оплатили наличкой</option>
+    <div className="transfers-price-input">
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        value={supplierTotalAmount}
+        onChange={(e) => setSupplierTotalAmount(e.target.value)}
+        placeholder="Введите сумму"
+      />
 
-              <option value="debt">За счёт долга</option>
-            </select>
-          </div>
+      <span>сом</span>
+    </div>
+  </div>
+)}
 
-          <button
-            className="transfers-primary-button"
-            disabled={saving || items.length === 0 || !selectedSupplier}
-            onClick={createSupplierReceipt}
-          >
-            {saving ? (
-              <>
-                <Loader2 className="spin" size={18} />
-                Оформление...
-              </>
-            ) : (
-              <>
-                <ArrowDownToLine size={18} />
-                Оформить приход
-              </>
-            )}
-          </button>
-        </div>
+  <div className="transfers-payment-select">
+    <select
+      value={supplierPaymentMethod}
+      onChange={(e) => setSupplierPaymentMethod(e.target.value)}
+      className="transfers-primary-button"
+    >
+      <option value="cash">Оплатили наличкой</option>
+      <option value="debt">За счёт долга</option>
+    </select>
+  </div>
+
+  <button
+    className="transfers-primary-button"
+    disabled={
+      saving ||
+      items.length === 0 ||
+      !selectedSupplier ||
+      !supplierTotalAmount ||
+      Number(supplierTotalAmount) <= 0
+    }
+    onClick={createSupplierReceipt}
+  >
+    {saving ? (
+      <>
+        <Loader2 className="spin" size={18} />
+        Оформление...
+      </>
+    ) : (
+      <>
+        <ArrowDownToLine size={18} />
+        Оформить приход
+      </>
+    )}
+  </button>
+</div>
       </>
     );
   };

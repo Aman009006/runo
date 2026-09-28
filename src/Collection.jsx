@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import API_URL from "./config.js";
 
-
 function formatMoney(value) {
   return new Intl.NumberFormat("ru-RU", {
     minimumFractionDigits: 2,
@@ -71,7 +70,7 @@ function Collection({ onBack }) {
   /**
    * Загрузка истории
    *
-   * 
+   *
    */
   const fetchTransactions = async (openHistory = false) => {
     try {
@@ -190,7 +189,7 @@ function Collection({ onBack }) {
        * Backend должен вернуть новый balance.
        */
       setCashBalance(Number(data.balance || 0));
-
+await fetchTransactions(false);
       setSuccess(
         actionType === "deposit"
           ? `В кассу внесено ${formatMoney(numericAmount)} сом`
@@ -252,13 +251,12 @@ function Collection({ onBack }) {
   };
 
   const filteredTransactions =
-  transactionFilter === "main"
-    ? transactions.filter(
-        (transaction) =>
-          transaction.type === "withdraw" ||
-          transaction.type === "deposit",
-      )
-    : transactions;
+    transactionFilter === "main"
+      ? transactions.filter(
+          (transaction) =>
+            transaction.type === "withdraw" || transaction.type === "deposit",
+        )
+      : transactions;
 
   return (
     <div
@@ -653,63 +651,61 @@ function Collection({ onBack }) {
               </div>
 
               <div
-  style={{
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    background: "#f1f5f9",
-    padding: "4px",
-    borderRadius: "10px",
-    marginLeft: "auto",
-    marginRight: "12px",
-  }}
->
-  <button
-    onClick={() => setTransactionFilter("main")}
-    style={{
-      height: "34px",
-      padding: "0 14px",
-      border: "none",
-      borderRadius: "8px",
-      background:
-        transactionFilter === "main" ? "#fff" : "transparent",
-      color:
-        transactionFilter === "main" ? "#0f172a" : "#64748b",
-      fontWeight: 700,
-      fontSize: "13px",
-      boxShadow:
-        transactionFilter === "main"
-          ? "0 1px 3px rgba(15,23,42,.08)"
-          : "none",
-      cursor: "pointer",
-    }}
-  >
-    Главные
-  </button>
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: "#f1f5f9",
+                  padding: "4px",
+                  borderRadius: "10px",
+                  marginLeft: "auto",
+                  marginRight: "12px",
+                }}
+              >
+                <button
+                  onClick={() => setTransactionFilter("main")}
+                  style={{
+                    height: "34px",
+                    padding: "0 14px",
+                    border: "none",
+                    borderRadius: "8px",
+                    background:
+                      transactionFilter === "main" ? "#fff" : "transparent",
+                    color: transactionFilter === "main" ? "#0f172a" : "#64748b",
+                    fontWeight: 700,
+                    fontSize: "13px",
+                    boxShadow:
+                      transactionFilter === "main"
+                        ? "0 1px 3px rgba(15,23,42,.08)"
+                        : "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  Главные
+                </button>
 
-  <button
-    onClick={() => setTransactionFilter("all")}
-    style={{
-      height: "34px",
-      padding: "0 14px",
-      border: "none",
-      borderRadius: "8px",
-      background:
-        transactionFilter === "all" ? "#fff" : "transparent",
-      color:
-        transactionFilter === "all" ? "#0f172a" : "#64748b",
-      fontWeight: 700,
-      fontSize: "13px",
-      boxShadow:
-        transactionFilter === "all"
-          ? "0 1px 3px rgba(15,23,42,.08)"
-          : "none",
-      cursor: "pointer",
-    }}
-  >
-    Все
-  </button>
-</div>
+                <button
+                  onClick={() => setTransactionFilter("all")}
+                  style={{
+                    height: "34px",
+                    padding: "0 14px",
+                    border: "none",
+                    borderRadius: "8px",
+                    background:
+                      transactionFilter === "all" ? "#fff" : "transparent",
+                    color: transactionFilter === "all" ? "#0f172a" : "#64748b",
+                    fontWeight: 700,
+                    fontSize: "13px",
+                    boxShadow:
+                      transactionFilter === "all"
+                        ? "0 1px 3px rgba(15,23,42,.08)"
+                        : "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  Все
+                </button>
+              </div>
 
               <button
                 onClick={() => setIsHistoryOpen(false)}
@@ -728,7 +724,7 @@ function Collection({ onBack }) {
               </button>
             </div>
 
-          {filteredTransactions.length === 0 ? (
+            {filteredTransactions.length === 0 ? (
               <div
                 style={{
                   padding: "50px 20px",
@@ -741,7 +737,12 @@ function Collection({ onBack }) {
             ) : (
               <div>
                 {filteredTransactions.map((transaction, index) => {
-                  const isDeposit = transaction.type === "deposit";
+                  const isIncome =
+                    transaction.type === "deposit" ||
+                    transaction.type === "sale" ||
+                    transaction.type === "reservation";
+
+                  const isSale = transaction.type === "sale";
 
                   return (
                     <div
@@ -770,14 +771,14 @@ function Collection({ onBack }) {
                             width: "42px",
                             height: "42px",
                             borderRadius: "12px",
-                            background: isDeposit ? "#f0fdf4" : "#fef2f2",
-                            color: isDeposit ? "#16a34a" : "#dc2626",
+                            background: isIncome ? "#f0fdf4" : "#fef2f2",
+                            color: isIncome ? "#16a34a" : "#dc2626",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                           }}
                         >
-                          {isDeposit ? <Plus size={20} /> : <Minus size={20} />}
+                          {isIncome ? <Plus size={20} /> : <Minus size={20} />}
                         </div>
 
                         <div>
@@ -787,7 +788,11 @@ function Collection({ onBack }) {
                               color: "#0f172a",
                             }}
                           >
-                            {isDeposit ? "Занесение денег" : "Забор денег"}
+                            {isSale
+                              ? "Оплата розничной продажи"
+                              : isIncome
+                                ? "Занесение денег"
+                                : "Забор денег"}
                           </div>
 
                           <div
@@ -813,11 +818,11 @@ function Collection({ onBack }) {
                           style={{
                             fontSize: "18px",
                             fontWeight: 750,
-                            color: isDeposit ? "#16a34a" : "#dc2626",
+                            color: isIncome ? "#16a34a" : "#dc2626",
                           }}
                         >
-                          {isDeposit ? "+" : "-"}
-                          {formatMoney(transaction.amount)} сом
+                          {isIncome ? "+" : "-"}
+                          {formatMoney(Math.abs(transaction.amount))} сом
                         </div>
 
                         {transaction.responsible && (

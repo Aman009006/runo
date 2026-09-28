@@ -778,7 +778,7 @@ function ReservationFormModal({
               <label className="field-label">
                 <span>
                   <User size={15} />
-                  Имя клиента
+                  Имя Продавца-клиента
                 </span>
 
                 <input
