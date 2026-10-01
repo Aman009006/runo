@@ -558,3 +558,54 @@
   font-size: 13px;
   color: #64748b;
 }
+.reports-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reports-telegram {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  min-height: 40px;
+  padding: 0 16px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #229ed9;
+  color: #ffffff;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.reports-telegram:hover:not(:disabled) {
+  background: #168ac0;
+}
+
+.reports-telegram:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 700px) {
+  .reports-header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .reports-telegram,
+  .reports-refresh {
+    width: 100%;
+  }
+}

@@ -399,10 +399,108 @@ export default function SalesHistory({ onBack }) {
   const [paymentFilter, setPaymentFilter] = useState("all");
 
   const [salesByDate, setSalesByDate] = useState({});
+  const [salespersons, setSalespersons] = useState([]);
+const [updatingSalespersonId, setUpdatingSalespersonId] =
+  useState(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const fetchSalespersons = async () => {
+  try {
+    const response = await fetch(
+      `${API_URL}/api/moysklad/salespersons`,
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Не удалось загрузить продавцов",
+      );
+    }
+
+    setSalespersons(data.salespersons || []);
+  } catch (err) {
+    console.error(
+      "Ошибка загрузки продавцов:",
+      err,
+    );
+  }
+};
+
+const updateSaleSalesperson = async (
+  saleId,
+  salespersonId,
+) => {
+  if (!saleId || !salespersonId) {
+    return;
+  }
+
+  setUpdatingSalespersonId(saleId);
+  setError(null);
+
+  try {
+    const response = await fetch(
+      `${API_URL}/api/moysklad/sales/${encodeURIComponent(
+        saleId,
+      )}/salesperson`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          salespersonId,
+        }),
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.message ||
+          "Не удалось изменить продавца",
+      );
+    }
+
+    setSalesByDate((prev) => {
+      const next = { ...prev };
+
+      Object.keys(next).forEach((date) => {
+        if (!Array.isArray(next[date])) {
+          return;
+        }
+
+        next[date] = next[date].map((sale) => {
+          if (sale?.id !== saleId) {
+            return sale;
+          }
+
+          return {
+            ...sale,
+            salesperson: data.sale.salesperson,
+          };
+        });
+      });
+
+      return next;
+    });
+  } catch (err) {
+    console.error(
+      "Ошибка изменения продавца:",
+      err,
+    );
+
+    setError(
+      err.message ||
+        "Не удалось изменить продавца",
+    );
+  } finally {
+    setUpdatingSalespersonId(null);
+  }
+};
   const fetchSales = async () => {
     setLoading(true);
     setError(null);
@@ -430,6 +528,7 @@ export default function SalesHistory({ onBack }) {
 
   useEffect(() => {
     fetchSales();
+      fetchSalespersons();
   }, []);
 
 const filteredSales = useMemo(() => {
@@ -787,13 +886,41 @@ const filteredSales = useMemo(() => {
                       </div>
                     </div>
                     {/* SALESPERSON */}
-                    <div style={styles.salespersonCell}>
-                      <div style={styles.salespersonName}>
-                        {sale.salesperson?.id || "Не указан"}
-                      </div>
+                   {/* SALESPERSON */}
+<div style={styles.salespersonCell}>
+  <select
+    value={sale.salesperson?.id || ""}
+    onChange={(e) =>
+      updateSaleSalesperson(
+        sale.id,
+        e.target.value,
+      )
+    }
+    disabled={
+      updatingSalespersonId === sale.id
+    }
+    style={styles.salespersonSelect}
+  >
+    <option value="" disabled>
+      Не указан
+    </option>
 
-          
-                    </div>
+    {salespersons.map((person) => (
+      <option
+        key={person.id}
+        value={person.id}
+      >
+        {person.name}
+      </option>
+    ))}
+  </select>
+
+  {updatingSalespersonId === sale.id && (
+    <div style={styles.salespersonSaving}>
+      Сохранение...
+    </div>
+  )}
+</div>
                     {/* AMOUNT */}
                     <div style={styles.amountCell}>
                       <div style={styles.amount}>
@@ -1342,4 +1469,25 @@ const styles = {
     fontSize: "13px",
     lineHeight: 1.5,
   },
+  salespersonSelect: {
+  width: "100%",
+  minWidth: "140px",
+  height: "36px",
+  padding: "0 10px",
+  border: "1px solid #cbd5e1",
+  borderRadius: "9px",
+  background: "#ffffff",
+  color: "#0f172a",
+  fontSize: "14px",
+  fontWeight: 600,
+  cursor: "pointer",
+  outline: "none",
+  boxSizing: "border-box",
+},
+
+salespersonSaving: {
+  marginTop: "4px",
+  fontSize: "11px",
+  color: "#64748b",
+},
 };

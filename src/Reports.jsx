@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import {
   ArrowLeft,
   RefreshCw,
@@ -11,6 +13,7 @@ import {
   Package,
   Banknote,
   ChevronDown,
+  Send,
 } from "lucide-react";
 
 import "./reports.css";
@@ -283,7 +286,7 @@ export default function Reports({ onBack }) {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
+  const [sendingTelegram, setSendingTelegram] = useState(false);
   const [period, setPeriod] = useState("today");
 
   const [from, setFrom] = useState(getToday());
@@ -365,38 +368,38 @@ export default function Reports({ onBack }) {
   const salesByPayment = useMemo(() => {
     const payments = report?.salesByPayment || {};
 
- const items = [
-  {
-    key: "cash",
-    name: "Наличные",
-    value: Number(payments.cash) || 0,
-  },
-  {
-    key: "card",
-    name: "Карта",
-    value: Number(payments.card) || 0,
-  },
-  {
-    key: "amanat",
-    name: "Аманат",
-    value: Number(payments.amanat) || 0,
-  },
-  {
-    key: "mplus",
-    name: "M+",
-    value: Number(payments.mplus) || 0,
-  },
-  {
-    key: "online_qr",
-    name: "Онлайн QR",
-    value: Number(payments.online_qr) || 0,
-  },
-  {
-    key: "local",
-    name: "Локальная оплата",
-    value: Number(payments.local) || 0,
-  },
-];
+    const items = [
+      {
+        key: "cash",
+        name: "Наличные",
+        value: Number(payments.cash) || 0,
+      },
+      {
+        key: "card",
+        name: "Карта",
+        value: Number(payments.card) || 0,
+      },
+      {
+        key: "amanat",
+        name: "Аманат",
+        value: Number(payments.amanat) || 0,
+      },
+      {
+        key: "mplus",
+        name: "M+",
+        value: Number(payments.mplus) || 0,
+      },
+      {
+        key: "online_qr",
+        name: "Онлайн QR",
+        value: Number(payments.online_qr) || 0,
+      },
+      {
+        key: "local",
+        name: "Локальная оплата",
+        value: Number(payments.local) || 0,
+      },
+    ];
 
     const total = items.reduce((sum, item) => sum + item.value, 0);
 
@@ -416,60 +419,185 @@ export default function Reports({ onBack }) {
   );
 
   const operationTypes = useMemo(() => report?.operationTypes || [], [report]);
-const clearAllData = async () => {
-  const password = window.prompt(
-    "Введите пароль для очистки всех данных:",
-  );
-
-  if (password === null) {
-    return;
-  }
-
-  if (password !== "аман159") {
-    window.alert("Неверный пароль");
-    return;
-  }
-
-  const confirmed = window.confirm(
-    "ВНИМАНИЕ!\n\nВсе продажи, расходы, бронирования, возвраты и другие данные будут удалены.\n\nПродолжить?",
-  );
-
-  if (!confirmed) {
-    return;
-  }
-
-  try {
-    setLoading(true);
-    setError("");
-
-    const response = await fetch(
-      `${API_URL}/api/reports/clear`,
-      {
-        method: "DELETE",
-      },
-    );
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      throw new Error(
-        data.message || "Не удалось очистить данные",
-      );
+  const sendReportToTelegram = async () => {
+    if (sendingTelegram) {
+      return;
     }
 
-    window.alert("Все данные успешно очищены");
+    const reportElement = document.querySelector(".reports-page");
 
-    await loadReport();
-  } catch (err) {
-    console.error(err);
+    if (!reportElement) {
+      window.alert("Не удалось найти страницу отчёта");
 
-    setError(
-      err.message || "Не удалось очистить данные",
+      return;
+    }
+
+    try {
+      setSendingTelegram(true);
+      setError("");
+
+      /*
+    |--------------------------------------------------------------------------
+    | 1. Делаем screenshot всей страницы
+    |--------------------------------------------------------------------------
+    */
+
+      const canvas = await html2canvas(reportElement, {
+        scale: 1.5,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        windowWidth: document.documentElement.scrollWidth,
+        windowHeight: document.documentElement.scrollHeight,
+      });
+
+      /*
+    |--------------------------------------------------------------------------
+    | 2. Создаём PDF A4
+    |--------------------------------------------------------------------------
+    */
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+      });
+
+      const pageWidth = 210;
+      const pageHeight = 297;
+
+      const margin = 5;
+
+      const contentWidth = pageWidth - margin * 2;
+
+      const imageWidth = canvas.width;
+      const imageHeight = canvas.height;
+
+      const ratio = contentWidth / imageWidth;
+
+      const scaledHeight = imageHeight * ratio;
+
+      /*
+    |--------------------------------------------------------------------------
+    | 3. Разбиваем длинный screenshot
+    |    на несколько страниц A4
+    |--------------------------------------------------------------------------
+    */
+
+      let position = 0;
+      let pageNumber = 0;
+
+      while (position < scaledHeight) {
+        if (pageNumber > 0) {
+          pdf.addPage();
+        }
+
+        pdf.addImage(
+          canvas.toDataURL("image/jpeg", 0.9),
+          "JPEG",
+          margin,
+          margin - position,
+          contentWidth,
+          scaledHeight,
+        );
+
+        position += pageHeight - margin * 2;
+
+        pageNumber += 1;
+      }
+
+      /*
+    |--------------------------------------------------------------------------
+    | 4. PDF -> Blob
+    |--------------------------------------------------------------------------
+    */
+
+      const pdfBlob = pdf.output("blob");
+
+      /*
+    |--------------------------------------------------------------------------
+    | 5. Отправляем PDF на backend
+    |--------------------------------------------------------------------------
+    */
+
+      const formData = new FormData();
+
+      formData.append("file", pdfBlob, `otchet-${getToday()}.pdf`);
+
+      formData.append(
+        "caption",
+        `Отчёт кассы\nДата: ${new Date().toLocaleString("ru-RU")}`,
+      );
+
+      const response = await fetch(`${API_URL}/api/reports/send-telegram`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Не удалось отправить отчёт");
+      }
+
+      window.alert("Отчёт успешно отправлен в Telegram");
+    } catch (err) {
+      console.error("SEND REPORT ERROR:", err);
+
+      setError(err.message || "Не удалось отправить отчёт в Telegram");
+
+      window.alert(err.message || "Не удалось отправить отчёт в Telegram");
+    } finally {
+      setSendingTelegram(false);
+    }
+  };
+  const clearAllData = async () => {
+    const password = window.prompt("Введите пароль для очистки всех данных:");
+
+    if (password === null) {
+      return;
+    }
+
+    if (password !== "аман159") {
+      window.alert("Неверный пароль");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "ВНИМАНИЕ!\n\nВсе продажи, расходы, бронирования, возвраты и другие данные будут удалены.\n\nПродолжить?",
     );
 
-    setLoading(false);
-  }
-};
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await fetch(`${API_URL}/api/reports/clear`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Не удалось очистить данные");
+      }
+
+      window.alert("Все данные успешно очищены");
+
+      await loadReport();
+    } catch (err) {
+      console.error(err);
+
+      setError(err.message || "Не удалось очистить данные");
+
+      setLoading(false);
+    }
+  };
   return (
     <div className="reports-page">
       <div className="reports-container">
@@ -485,14 +613,34 @@ const clearAllData = async () => {
             </div>
           </div>
 
-          <button
-            className="reports-refresh"
-            onClick={loadReport}
-            disabled={loading}
-          >
-            <RefreshCw size={18} className={loading ? "reports-spin" : ""} />
-            Обновить
-          </button>
+          <div className="reports-header-actions">
+            <button
+              className="reports-telegram"
+              onClick={sendReportToTelegram}
+              disabled={loading || sendingTelegram}
+            >
+              {sendingTelegram ? (
+                <>
+                  <RefreshCw size={18} className="reports-spin" />
+                  Формирование PDF...
+                </>
+              ) : (
+                <>
+                  <Send size={18} />
+                  Отправить в Telegram
+                </>
+              )}
+            </button>
+
+            <button
+              className="reports-refresh"
+              onClick={loadReport}
+              disabled={loading || sendingTelegram}
+            >
+              <RefreshCw size={18} className={loading ? "reports-spin" : ""} />
+              Обновить
+            </button>
+          </div>
         </header>
 
         <div className="reports-period">
@@ -806,32 +954,32 @@ const clearAllData = async () => {
         )}
       </div>
       <div
-  style={{
-    display: "flex",
-    justifyContent: "center",
-    marginTop: "30px",
-    paddingBottom: "20px",
-  }}
->
-  <button
-    type="button"
-    onClick={clearAllData}
-    disabled={loading}
-    style={{
-      padding: "7px 14px",
-      border: "1px solid #dc2626",
-      borderRadius: "6px",
-      background: "#fff",
-      color: "#dc2626",
-      fontSize: "12px",
-      fontWeight: 600,
-      cursor: loading ? "not-allowed" : "pointer",
-      opacity: loading ? 0.5 : 1,
-    }}
-  >
-    Очистить все
-  </button>
-</div>
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          marginTop: "30px",
+          paddingBottom: "20px",
+        }}
+      >
+        <button
+          type="button"
+          onClick={clearAllData}
+          disabled={loading}
+          style={{
+            padding: "7px 14px",
+            border: "1px solid #dc2626",
+            borderRadius: "6px",
+            background: "#fff",
+            color: "#dc2626",
+            fontSize: "12px",
+            fontWeight: 600,
+            cursor: loading ? "not-allowed" : "pointer",
+            opacity: loading ? 0.5 : 1,
+          }}
+        >
+          Очистить все
+        </button>
+      </div>
     </div>
   );
 }
