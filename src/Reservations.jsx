@@ -21,7 +21,6 @@ import "./reservations.css";
 
 import API_URL from "./config.js";
 
-
 const PAYMENT_METHODS = [
   {
     key: "cash",
@@ -272,7 +271,8 @@ function getPaymentStatusClass(status) {
 function calculateItemsTotal(items) {
   return roundMoney(
     items.reduce(
-      (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0),
+      (sum, item) =>
+        sum + Number(item.price || 0) * Number(item.quantity || 0),
       0,
     ),
   );
@@ -396,13 +396,23 @@ function PaymentFields({
       </div>
 
       {totalEntered > maxAmount && (
-        <div className="form-error">Сумма оплаты больше допустимой суммы.</div>
+        <div className="form-error">
+          Сумма оплаты больше допустимой суммы.
+        </div>
       )}
     </div>
   );
 }
 
-function ProductPicker({ products, items, onAdd, onChangeQuantity, onRemove }) {
+function ProductPicker({
+  products,
+  items,
+  onAdd,
+  onChangeQuantity,
+  onChangePrice,
+  onRemove,
+  isEdit,
+}) {
   const [search, setSearch] = useState("");
 
   const filteredProducts = useMemo(() => {
@@ -432,7 +442,9 @@ function ProductPicker({ products, items, onAdd, onChangeQuantity, onRemove }) {
         <div>
           <div className="section-title">Товары</div>
 
-          <div className="section-description">Выберите товары для брони</div>
+          <div className="section-description">
+            Выберите товары для брони
+          </div>
         </div>
 
         <div className="product-count">{items.length}</div>
@@ -453,7 +465,8 @@ function ProductPicker({ products, items, onAdd, onChangeQuantity, onRemove }) {
           <div className="empty-products">Товары не найдены</div>
         ) : (
           filteredProducts.map((product) => {
-            const productId = product.id || product.meta?.href || product.name;
+            const productId =
+              product.id || product.meta?.href || product.name;
 
             const quantity = getItemQuantity(productId);
 
@@ -484,9 +497,29 @@ function ProductPicker({ products, items, onAdd, onChangeQuantity, onRemove }) {
                         : "Без кода"}
                     </div>
 
-                    <div className="product-picker-price">
-                      {formatMoney(price)}
-                    </div>
+                    {quantity === 0 ? (
+                      <div className="product-picker-price">
+                        {formatMoney(price)}
+                      </div>
+                    ) : (
+                      <label className="product-picker-price-input">
+                        <span>Цена</span>
+
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={
+                            items.find((item) => item.id === productId)
+                              ?.price ?? ""
+                          }
+                          disabled={isEdit}
+                          onChange={(event) =>
+                            onChangePrice(productId, event.target.value)
+                          }
+                        />
+                      </label>
+                    )}
                   </div>
                 </div>
 
@@ -503,7 +536,9 @@ function ProductPicker({ products, items, onAdd, onChangeQuantity, onRemove }) {
                   <div className="quantity-control">
                     <button
                       type="button"
-                      onClick={() => onChangeQuantity(productId, quantity - 1)}
+                      onClick={() =>
+                        onChangeQuantity(productId, quantity - 1)
+                      }
                     >
                       −
                     </button>
@@ -512,7 +547,9 @@ function ProductPicker({ products, items, onAdd, onChangeQuantity, onRemove }) {
 
                     <button
                       type="button"
-                      onClick={() => onChangeQuantity(productId, quantity + 1)}
+                      onClick={() =>
+                        onChangeQuantity(productId, quantity + 1)
+                      }
                     >
                       +
                     </button>
@@ -561,7 +598,9 @@ function ReservationFormModal({
   const [items, setItems] = useState(reservation?.items || []);
 
   const [paymentMethod, setPaymentMethod] = useState(
-    reservation ? getInitialPaymentMethod(reservation.payments) : "cash",
+    reservation
+      ? getInitialPaymentMethod(reservation.payments)
+      : "cash",
   );
 
   const [payments, setPayments] = useState(
@@ -585,6 +624,7 @@ function ReservationFormModal({
   );
 
   const remaining = roundMoney(Math.max(0, total - paymentTotal));
+
   const refundAmount = roundMoney(
     isEdit ? Math.max(0, paymentTotal - total) : 0,
   );
@@ -624,7 +664,9 @@ function ReservationFormModal({
 
   const changeQuantity = (id, quantity) => {
     if (quantity <= 0) {
-      setItems((currentItems) => currentItems.filter((item) => item.id !== id));
+      setItems((currentItems) =>
+        currentItems.filter((item) => item.id !== id),
+      );
 
       return;
     }
@@ -641,8 +683,29 @@ function ReservationFormModal({
     );
   };
 
+  const changePrice = (id, value) => {
+    if (isEdit) {
+      return;
+    }
+
+    const numericValue = value === "" ? 0 : Number(value);
+
+    setItems((currentItems) =>
+      currentItems.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              price: Number.isFinite(numericValue) ? numericValue : 0,
+            }
+          : item,
+      ),
+    );
+  };
+
   const removeProduct = (id) => {
-    setItems((currentItems) => currentItems.filter((item) => item.id !== id));
+    setItems((currentItems) =>
+      currentItems.filter((item) => item.id !== id),
+    );
   };
 
   const handlePaymentMethodChange = (method) => {
@@ -700,8 +763,17 @@ function ReservationFormModal({
       return;
     }
 
+    if (!isEdit && paymentTotal <= 0) {
+      setError(
+        "Для создания брони необходимо внести первую оплату.",
+      );
+      return;
+    }
+
     if (!isEdit && paymentTotal > total) {
-      setError("Сумма оплаты не может быть больше суммы брони.");
+      setError(
+        "Сумма оплаты не может быть больше суммы брони.",
+      );
       return;
     }
 
@@ -740,7 +812,9 @@ function ReservationFormModal({
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || "Не удалось сохранить бронь");
+        throw new Error(
+          data.message || "Не удалось сохранить бронь",
+        );
       }
 
       onSaved(data.reservation);
@@ -760,12 +834,18 @@ function ReservationFormModal({
 
             <p>
               {isEdit
-                ? `Бронь от ${formatDate(reservation.reservationDate)}`
+                ? `Бронь от ${formatDate(
+                    reservation.reservationDate,
+                  )}`
                 : "Создание новой брони"}
             </p>
           </div>
 
-          <button type="button" className="close-button" onClick={onClose}>
+          <button
+            type="button"
+            className="close-button"
+            onClick={onClose}
+          >
             <X size={20} />
           </button>
         </div>
@@ -783,7 +863,9 @@ function ReservationFormModal({
 
                 <input
                   value={customerName}
-                  onChange={(event) => setCustomerName(event.target.value)}
+                  onChange={(event) =>
+                    setCustomerName(event.target.value)
+                  }
                   placeholder="Введите имя"
                 />
               </label>
@@ -796,7 +878,9 @@ function ReservationFormModal({
 
                 <input
                   value={customerPhone}
-                  onChange={(event) => setCustomerPhone(event.target.value)}
+                  onChange={(event) =>
+                    setCustomerPhone(event.target.value)
+                  }
                   placeholder="+996 ..."
                 />
               </label>
@@ -810,7 +894,9 @@ function ReservationFormModal({
                 <input
                   type="date"
                   value={reservationDate}
-                  onChange={(event) => setReservationDate(event.target.value)}
+                  onChange={(event) =>
+                    setReservationDate(event.target.value)
+                  }
                 />
               </label>
 
@@ -819,7 +905,9 @@ function ReservationFormModal({
 
                 <input
                   value={comment}
-                  onChange={(event) => setComment(event.target.value)}
+                  onChange={(event) =>
+                    setComment(event.target.value)
+                  }
                   placeholder="Комментарий"
                 />
               </label>
@@ -831,7 +919,9 @@ function ReservationFormModal({
             items={items}
             onAdd={addProduct}
             onChangeQuantity={changeQuantity}
+            onChangePrice={changePrice}
             onRemove={removeProduct}
+            isEdit={isEdit}
           />
 
           <PaymentFields
@@ -846,18 +936,24 @@ function ReservationFormModal({
           <div className="reservation-total-box">
             {refundAmount > 0 && (
               <div className="form-warning">
-                Возврат клиенту: <strong>{formatMoney(refundAmount)}</strong>
+                Возврат клиенту:{" "}
+                <strong>{formatMoney(refundAmount)}</strong>
+
                 <div>
-                  Новая сумма брони меньше уже внесённой предоплаты. Разница
-                  должна быть возвращена клиенту.
+                  Новая сумма брони меньше уже внесённой
+                  предоплаты. Разница должна быть возвращена
+                  клиенту.
                 </div>
               </div>
             )}
+
             <div>
               <span>Товаров</span>
+
               <strong>
                 {items.reduce(
-                  (sum, item) => sum + Number(item.quantity || 0),
+                  (sum, item) =>
+                    sum + Number(item.quantity || 0),
                   0,
                 )}
               </strong>
@@ -865,18 +961,25 @@ function ReservationFormModal({
 
             <div>
               <span>Сумма брони</span>
+
               <strong>{formatMoney(total)}</strong>
             </div>
 
             <div>
               <span>Оплачено</span>
+
               <strong>{formatMoney(paymentTotal)}</strong>
             </div>
 
             <div>
               <span>Остаток</span>
+
               <strong
-                className={remaining === 0 ? "money-paid" : "money-remaining"}
+                className={
+                  remaining === 0
+                    ? "money-paid"
+                    : "money-remaining"
+                }
               >
                 {formatMoney(remaining)}
               </strong>
@@ -900,7 +1003,10 @@ function ReservationFormModal({
             type="button"
             className="primary-button"
             onClick={saveReservation}
-            disabled={saving}
+            disabled={
+              saving ||
+              (!isEdit && paymentTotal <= 0)
+            }
           >
             {saving
               ? "Сохранение..."
@@ -924,7 +1030,8 @@ function ReservationListModal({
   onCancel,
   onPayment,
 }) {
-  const [selectedReservation, setSelectedReservation] = useState(null);
+  const [selectedReservation, setSelectedReservation] =
+    useState(null);
 
   const dateReservations = reservations.filter(
     (reservation) =>
@@ -941,22 +1048,31 @@ function ReservationListModal({
 
             <p>
               {formatDate(date)} · {dateReservations.length}{" "}
-              {dateReservations.length === 1 ? "бронь" : "брони"}
+              {dateReservations.length === 1
+                ? "бронь"
+                : "брони"}
             </p>
           </div>
 
-          <button type="button" className="close-button" onClick={onClose}>
+          <button
+            type="button"
+            className="close-button"
+            onClick={onClose}
+          >
             <X size={20} />
           </button>
         </div>
 
         <div className="reservation-modal-content">
           {dateReservations.length === 0 ? (
-            <div className="empty-state">На эту дату броней нет.</div>
+            <div className="empty-state">
+              На эту дату броней нет.
+            </div>
           ) : (
             <div className="reservations-list">
               {dateReservations.map((reservation) => {
-                const isSelected = selectedReservation?.id === reservation.id;
+                const isSelected =
+                  selectedReservation?.id === reservation.id;
 
                 return (
                   <div
@@ -970,7 +1086,8 @@ function ReservationListModal({
                         <div className="reservation-customer">
                           <User size={17} />
 
-                          {reservation.customerName || "Без имени"}
+                          {reservation.customerName ||
+                            "Без имени"}
                         </div>
 
                         {reservation.customerPhone && (
@@ -988,7 +1105,9 @@ function ReservationListModal({
                             reservation.status,
                           )}`}
                         >
-                          {getStatusLabel(reservation.status)}
+                          {getStatusLabel(
+                            reservation.status,
+                          )}
                         </span>
 
                         <span
@@ -996,18 +1115,24 @@ function ReservationListModal({
                             reservation.paymentStatus,
                           )}`}
                         >
-                          {getPaymentStatusLabel(reservation.paymentStatus)}
+                          {getPaymentStatusLabel(
+                            reservation.paymentStatus,
+                          )}
                         </span>
                       </div>
                     </div>
 
                     <div className="reservation-items">
                       {reservation.items.map((item) => (
-                        <div className="reservation-item" key={item.id}>
+                        <div
+                          className="reservation-item"
+                          key={item.id}
+                        >
                           <span>{item.name}</span>
 
                           <span>
-                            {item.quantity} × {formatMoney(item.price)}
+                            {item.quantity} ×{" "}
+                            {formatMoney(item.price)}
                           </span>
                         </div>
                       ))}
@@ -1016,16 +1141,23 @@ function ReservationListModal({
                     <div className="reservation-finance">
                       <div>
                         <span>Сумма</span>
-                        <strong>{formatMoney(reservation.total)}</strong>
+
+                        <strong>
+                          {formatMoney(reservation.total)}
+                        </strong>
                       </div>
 
                       <div>
                         <span>Оплачено</span>
-                        <strong>{formatMoney(reservation.paid)}</strong>
+
+                        <strong>
+                          {formatMoney(reservation.paid)}
+                        </strong>
                       </div>
 
                       <div>
                         <span>Остаток</span>
+
                         <strong
                           className={
                             reservation.remaining === 0
@@ -1033,20 +1165,24 @@ function ReservationListModal({
                               : "money-remaining"
                           }
                         >
-                          {formatMoney(reservation.remaining)}
+                          {formatMoney(
+                            reservation.remaining,
+                          )}
                         </strong>
                       </div>
                     </div>
 
                     {reservation.comment && (
                       <div className="reservation-comment">
-                        <strong>Комментарий:</strong> {reservation.comment}
+                        <strong>Комментарий:</strong>{" "}
+                        {reservation.comment}
                       </div>
                     )}
 
                     <div className="reservation-actions">
                       {reservation.status !== "issued" &&
-                        reservation.status !== "cancelled" && (
+                        reservation.status !==
+                          "cancelled" && (
                           <>
                             {reservation.remaining > 0 && (
                               <button
@@ -1054,7 +1190,9 @@ function ReservationListModal({
                                 className="payment-action-button"
                                 onClick={() =>
                                   setSelectedReservation(
-                                    isSelected ? null : reservation,
+                                    isSelected
+                                      ? null
+                                      : reservation,
                                   )
                                 }
                               >
@@ -1066,7 +1204,9 @@ function ReservationListModal({
                             <button
                               type="button"
                               className="edit-action-button"
-                              onClick={() => onEdit(reservation)}
+                              onClick={() =>
+                                onEdit(reservation)
+                              }
                             >
                               <Pencil size={16} />
                               Изменить
@@ -1075,7 +1215,9 @@ function ReservationListModal({
                             <button
                               type="button"
                               className="cancel-action-button"
-                              onClick={() => onCancel(reservation)}
+                              onClick={() =>
+                                onCancel(reservation)
+                              }
                             >
                               <Ban size={16} />
                               Отменить
@@ -1083,7 +1225,8 @@ function ReservationListModal({
                           </>
                         )}
 
-                      {reservation.status !== "cancelled" && (
+                      {reservation.status !==
+                        "cancelled" && (
                         <button
                           type="button"
                           disabled={
@@ -1106,12 +1249,13 @@ function ReservationListModal({
                       )}
                     </div>
 
-                    {isSelected && reservation.remaining > 0 && (
-                      <PaymentEditor
-                        reservation={reservation}
-                        onPayment={onPayment}
-                      />
-                    )}
+                    {isSelected &&
+                      reservation.remaining > 0 && (
+                        <PaymentEditor
+                          reservation={reservation}
+                          onPayment={onPayment}
+                        />
+                      )}
                   </div>
                 );
               })}
@@ -1124,13 +1268,16 @@ function ReservationListModal({
 }
 
 function PaymentEditor({ reservation, onPayment }) {
-  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [paymentMethod, setPaymentMethod] =
+    useState("cash");
 
-  const [payments, setPayments] = useState(emptyPayments());
+  const [payments, setPayments] =
+    useState(emptyPayments());
 
   const entered = roundMoney(
     PAYMENT_METHODS.reduce(
-      (sum, method) => sum + Number(payments[method.key] || 0),
+      (sum, method) =>
+        sum + Number(payments[method.key] || 0),
       0,
     ),
   );
@@ -1147,11 +1294,14 @@ function PaymentEditor({ reservation, onPayment }) {
   };
 
   const changePayment = (method, value) => {
-    const numericValue = value === "" ? 0 : Number(value);
+    const numericValue =
+      value === "" ? 0 : Number(value);
 
     setPayments((current) => ({
       ...current,
-      [method]: Number.isFinite(numericValue) ? numericValue : 0,
+      [method]: Number.isFinite(numericValue)
+        ? numericValue
+        : 0,
     }));
   };
 
@@ -1166,14 +1316,21 @@ function PaymentEditor({ reservation, onPayment }) {
       return;
     }
 
-    onPayment(reservation, paymentMethod, payments);
+    onPayment(
+      reservation,
+      paymentMethod,
+      payments,
+    );
   };
 
-  const isExactPayment = entered > 0 && entered === remaining;
+  const isExactPayment =
+    entered > 0 && entered === remaining;
 
   return (
     <div className="remaining-payment-editor">
-      <div className="remaining-payment-title">Внести остаток</div>
+      <div className="remaining-payment-title">
+        Внести остаток
+      </div>
 
       <div className="payment-method-grid">
         {PAYMENT_METHOD_OPTIONS.map((method) => (
@@ -1195,20 +1352,27 @@ function PaymentEditor({ reservation, onPayment }) {
       {paymentMethod !== "mixed" ? (
         <label className="field-label">
           Сумма
+
           <input
             type="number"
             min="0"
             step="0.01"
             value={payments[paymentMethod] || ""}
             onChange={(event) =>
-              changePayment(paymentMethod, event.target.value)
+              changePayment(
+                paymentMethod,
+                event.target.value,
+              )
             }
           />
         </label>
       ) : (
         <div className="mixed-payment-grid">
           {PAYMENT_METHODS.map((method) => (
-            <label key={method.key} className="field-label">
+            <label
+              key={method.key}
+              className="field-label"
+            >
               {method.label}
 
               <input
@@ -1217,7 +1381,10 @@ function PaymentEditor({ reservation, onPayment }) {
                 step="0.01"
                 value={payments[method.key] || ""}
                 onChange={(event) =>
-                  changePayment(method.key, event.target.value)
+                  changePayment(
+                    method.key,
+                    event.target.value,
+                  )
                 }
               />
             </label>
@@ -1227,15 +1394,19 @@ function PaymentEditor({ reservation, onPayment }) {
 
       {entered > 0 && !isExactPayment && (
         <div className="form-error">
-          Для второго платежа необходимо внести весь остаток:{" "}
-          {formatMoney(remaining)}
+          Для второго платежа необходимо внести весь
+          остаток: {formatMoney(remaining)}
         </div>
       )}
 
       <div className="remaining-payment-footer">
         <div>
           Остаток после оплаты:{" "}
-          <strong>{formatMoney(Math.max(0, remaining - entered))}</strong>
+          <strong>
+            {formatMoney(
+              Math.max(0, remaining - entered),
+            )}
+          </strong>
         </div>
 
         <button
@@ -1251,7 +1422,12 @@ function PaymentEditor({ reservation, onPayment }) {
   );
 }
 
-function ReservationPreviewModal({ reservation, onClose, onEdit, onIssue }) {
+function ReservationPreviewModal({
+  reservation,
+  onClose,
+  onEdit,
+  onIssue,
+}) {
   return (
     <div className="reservation-overlay">
       <div className="reservation-modal preview-modal animate-modal">
@@ -1259,10 +1435,16 @@ function ReservationPreviewModal({ reservation, onClose, onEdit, onIssue }) {
           <div>
             <h2>Бронь</h2>
 
-            <p>{formatDate(reservation.reservationDate)}</p>
+            <p>
+              {formatDate(reservation.reservationDate)}
+            </p>
           </div>
 
-          <button type="button" className="close-button" onClick={onClose}>
+          <button
+            type="button"
+            className="close-button"
+            onClick={onClose}
+          >
             <X size={20} />
           </button>
         </div>
@@ -1274,26 +1456,39 @@ function ReservationPreviewModal({ reservation, onClose, onEdit, onIssue }) {
             </div>
 
             <div>
-              <strong>{reservation.customerName || "Без имени"}</strong>
+              <strong>
+                {reservation.customerName ||
+                  "Без имени"}
+              </strong>
 
               {reservation.customerPhone && (
-                <span>{reservation.customerPhone}</span>
+                <span>
+                  {reservation.customerPhone}
+                </span>
               )}
             </div>
           </div>
 
           <div className="preview-items">
             {reservation.items.map((item) => (
-              <div className="preview-item" key={item.id}>
+              <div
+                className="preview-item"
+                key={item.id}
+              >
                 <div>
                   <strong>{item.name}</strong>
 
                   <span>
-                    {item.quantity} × {formatMoney(item.price)}
+                    {item.quantity} ×{" "}
+                    {formatMoney(item.price)}
                   </span>
                 </div>
 
-                <strong>{formatMoney(item.quantity * item.price)}</strong>
+                <strong>
+                  {formatMoney(
+                    item.quantity * item.price,
+                  )}
+                </strong>
               </div>
             ))}
           </div>
@@ -1301,22 +1496,33 @@ function ReservationPreviewModal({ reservation, onClose, onEdit, onIssue }) {
           <div className="preview-finance">
             <div>
               <span>Сумма</span>
-              <strong>{formatMoney(reservation.total)}</strong>
+
+              <strong>
+                {formatMoney(reservation.total)}
+              </strong>
             </div>
 
             <div>
               <span>Оплачено</span>
-              <strong>{formatMoney(reservation.paid)}</strong>
+
+              <strong>
+                {formatMoney(reservation.paid)}
+              </strong>
             </div>
 
             <div>
               <span>Остаток</span>
+
               <strong
                 className={
-                  reservation.remaining === 0 ? "money-paid" : "money-remaining"
+                  reservation.remaining === 0
+                    ? "money-paid"
+                    : "money-remaining"
                 }
               >
-                {formatMoney(reservation.remaining)}
+                {formatMoney(
+                  reservation.remaining,
+                )}
               </strong>
             </div>
           </div>
@@ -1324,25 +1530,36 @@ function ReservationPreviewModal({ reservation, onClose, onEdit, onIssue }) {
           <div className="preview-payment-info">
             <span>Способ оплаты</span>
 
-            <strong>{getPaymentMethodLabel(reservation.paymentMethod)}</strong>
+            <strong>
+              {getPaymentMethodLabel(
+                reservation.paymentMethod,
+              )}
+            </strong>
           </div>
 
           {reservation.comment && (
             <div className="preview-comment">
               <span>Комментарий</span>
+
               <p>{reservation.comment}</p>
             </div>
           )}
 
           <div
-            className={`preview-status ${getStatusClass(reservation.status)}`}
+            className={`preview-status ${getStatusClass(
+              reservation.status,
+            )}`}
           >
             {getStatusLabel(reservation.status)}
           </div>
         </div>
 
         <div className="reservation-modal-footer">
-          <button type="button" className="secondary-button" onClick={onClose}>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={onClose}
+          >
             Закрыть
           </button>
 
@@ -1364,6 +1581,7 @@ function ReservationPreviewModal({ reservation, onClose, onEdit, onIssue }) {
                 onClick={() => onIssue(reservation)}
               >
                 <CheckCircle2 size={17} />
+
                 {reservation.remaining > 0
                   ? "Сначала оплатить"
                   : "Выдать бронь"}
@@ -1383,78 +1601,105 @@ function Reservations({
   onRefreshProducts,
   onBack,
 }) {
-  const [currentMonth, setCurrentMonth] = useState(getMonthStart(new Date()));
-const [search, setSearch] = useState("");
-  const [reservations, setReservations] = useState([]);
+  const [currentMonth, setCurrentMonth] = useState(
+    getMonthStart(new Date()),
+  );
+
+  const [search, setSearch] = useState("");
+
+  const [reservations, setReservations] =
+    useState([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [formOpen, setFormOpen] = useState(false);
-  const [formDate, setFormDate] = useState(getTodayString());
+  const [formDate, setFormDate] =
+    useState(getTodayString());
 
-  const [editingReservation, setEditingReservation] = useState(null);
+  const [editingReservation, setEditingReservation] =
+    useState(null);
 
   const [listDate, setListDate] = useState(null);
 
-  const [previewReservation, setPreviewReservation] = useState(null);
+  const [previewReservation, setPreviewReservation] =
+    useState(null);
 
-  const calendarDays = getCalendarDays(currentMonth);
+  const calendarDays =
+    getCalendarDays(currentMonth);
+
   const filteredReservations = useMemo(() => {
-  const value = search.trim().toLowerCase();
+    const value = search.trim().toLowerCase();
 
-  return reservations.filter((reservation) => {
-    const reservationDate = normalizeDateString(
-      reservation.reservationDate,
-    );
+    return reservations.filter((reservation) => {
+      const reservationDate =
+        normalizeDateString(
+          reservation.reservationDate,
+        );
 
-    const date = new Date(`${reservationDate}T00:00:00`);
+      const date = new Date(
+        `${reservationDate}T00:00:00`,
+      );
 
-    const sameMonthAndYear =
-      date.getFullYear() === currentMonth.getFullYear() &&
-      date.getMonth() === currentMonth.getMonth();
+      const sameMonthAndYear =
+        date.getFullYear() ===
+          currentMonth.getFullYear() &&
+        date.getMonth() ===
+          currentMonth.getMonth();
 
-    if (!sameMonthAndYear) {
-      return false;
-    }
+      if (!sameMonthAndYear) {
+        return false;
+      }
 
-    if (!value) {
-      return true;
-    }
+      if (!value) {
+        return true;
+      }
 
-    const customerName = String(
-      reservation.customerName || "",
-    ).toLowerCase();
+      const customerName = String(
+        reservation.customerName || "",
+      ).toLowerCase();
 
-    const customerPhone = String(
-      reservation.customerPhone || "",
-    ).toLowerCase();
+      const customerPhone = String(
+        reservation.customerPhone || "",
+      ).toLowerCase();
 
-    const comment = String(
-      reservation.comment || "",
-    ).toLowerCase();
+      const comment = String(
+        reservation.comment || "",
+      ).toLowerCase();
 
-    return (
-      customerName.includes(value) ||
-      customerPhone.includes(value) ||
-      comment.includes(value)
-    );
-  });
-}, [reservations, search, currentMonth]);
+      return (
+        customerName.includes(value) ||
+        customerPhone.includes(value) ||
+        comment.includes(value)
+      );
+    });
+  }, [
+    reservations,
+    search,
+    currentMonth,
+  ]);
 
   const loadReservations = async () => {
     setLoading(true);
     setError("");
 
     try {
-      const response = await fetch(`${API_URL}/api/reservations`);
+      const response = await fetch(
+        `${API_URL}/api/reservations`,
+      );
 
       const data = await response.json();
 
-      console.log("RESERVATIONS RESPONSE:", data);
+      console.log(
+        "RESERVATIONS RESPONSE:",
+        data,
+      );
 
       if (!response.ok) {
-        throw new Error(data.message || "Не удалось загрузить брони");
+        throw new Error(
+          data.message ||
+            "Не удалось загрузить брони",
+        );
       }
 
       // Backend может вернуть:
@@ -1467,25 +1712,44 @@ const [search, setSearch] = useState("");
         rows = data;
       } else if (Array.isArray(data.rows)) {
         rows = data.rows;
-      } else if (Array.isArray(data.reservations)) {
+      } else if (
+        Array.isArray(data.reservations)
+      ) {
         rows = data.reservations;
       }
 
-      console.log("Брони для календаря:", rows);
+      console.log(
+        "Брони для календаря:",
+        rows,
+      );
 
-      const normalizedRows = rows.map((reservation) => ({
-        ...reservation,
+      const normalizedRows = rows.map(
+        (reservation) => ({
+          ...reservation,
 
-        reservationDate: normalizeDateString(reservation.reservationDate),
-      }));
+          reservationDate:
+            normalizeDateString(
+              reservation.reservationDate,
+            ),
+        }),
+      );
 
-      console.log("Нормализованные брони:", normalizedRows);
+      console.log(
+        "Нормализованные брони:",
+        normalizedRows,
+      );
 
       setReservations(normalizedRows);
     } catch (err) {
-      console.error("Ошибка загрузки броней:", err);
+      console.error(
+        "Ошибка загрузки броней:",
+        err,
+      );
 
-      setError(err.message || "Не удалось загрузить брони");
+      setError(
+        err.message ||
+          "Не удалось загрузить брони",
+      );
     } finally {
       setLoading(false);
     }
@@ -1498,19 +1762,24 @@ const [search, setSearch] = useState("");
   const reservationsByDate = useMemo(() => {
     const result = {};
 
-    filteredReservations.forEach((reservation) => {
-      const dateString = normalizeDateString(reservation.reservationDate);
+    filteredReservations.forEach(
+      (reservation) => {
+        const dateString =
+          normalizeDateString(
+            reservation.reservationDate,
+          );
 
-      if (!dateString) {
-        return;
-      }
+        if (!dateString) {
+          return;
+        }
 
-      if (!result[dateString]) {
-        result[dateString] = [];
-      }
+        if (!result[dateString]) {
+          result[dateString] = [];
+        }
 
-      result[dateString].push(reservation);
-    });
+        result[dateString].push(reservation);
+      },
+    );
 
     return result;
   }, [filteredReservations]);
@@ -1538,31 +1807,52 @@ const [search, setSearch] = useState("");
   const handleIssue = async (reservation) => {
     if (reservation.remaining > 0) {
       setPreviewReservation(null);
-      setListDate(reservation.reservationDate);
+      setListDate(
+        reservation.reservationDate,
+      );
       return;
     }
 
     try {
-      const response = await fetch(
-        `${API_URL}/api/reservations/${reservation.id}/issue`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-      );
+     const retailShiftSyncId = localStorage.getItem(
+  "moysklad_retail_shift_id",
+);
+
+if (!retailShiftSyncId) {
+  setError("Кассовая смена МойСклад не открыта.");
+  return;
+}
+
+const response = await fetch(
+  `${API_URL}/api/reservations/${reservation.id}/issue`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      retailShiftSyncId,
+    }),
+  },
+);
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || "Не удалось выдать бронь");
+        throw new Error(
+          data.message ||
+            "Не удалось выдать бронь",
+        );
       }
 
       setPreviewReservation(null);
+
       await loadReservations();
     } catch (err) {
-      setError(err.message || "Не удалось выдать бронь");
+      setError(
+        err.message ||
+          "Не удалось выдать бронь",
+      );
     }
   };
 
@@ -1581,7 +1871,8 @@ const [search, setSearch] = useState("");
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
         },
       );
@@ -1589,19 +1880,33 @@ const [search, setSearch] = useState("");
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || "Не удалось отменить бронь");
+        throw new Error(
+          data.message ||
+            "Не удалось отменить бронь",
+        );
       }
 
       await loadReservations();
     } catch (err) {
-      setError(err.message || "Не удалось отменить бронь");
+      setError(
+        err.message ||
+          "Не удалось отменить бронь",
+      );
     }
   };
 
-  const handlePayment = async (reservation, paymentMethod, payments) => {
+  const handlePayment = async (
+    reservation,
+    paymentMethod,
+    payments,
+  ) => {
     const amount = roundMoney(
       PAYMENT_METHODS.reduce(
-        (sum, method) => sum + Number(payments?.[method.key] || 0),
+        (sum, method) =>
+          sum +
+          Number(
+            payments?.[method.key] || 0,
+          ),
         0,
       ),
     );
@@ -1612,7 +1917,10 @@ const [search, setSearch] = useState("");
 
     // Второй платеж должен полностью
     // закрыть оставшуюся сумму.
-    if (amount !== roundMoney(reservation.remaining)) {
+    if (
+      amount !==
+      roundMoney(reservation.remaining)
+    ) {
       setError(
         `Для полного выкупа необходимо внести ${formatMoney(
           reservation.remaining,
@@ -1628,7 +1936,8 @@ const [search, setSearch] = useState("");
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
           body: JSON.stringify({
             paymentMethod,
@@ -1644,26 +1953,40 @@ const [search, setSearch] = useState("");
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || "Не удалось внести оплату");
+        throw new Error(
+          data.message ||
+            "Не удалось внести оплату",
+        );
       }
 
       await loadReservations();
     } catch (err) {
-      setError(err.message || "Не удалось внести оплату");
+      setError(
+        err.message ||
+          "Не удалось внести оплату",
+      );
     }
   };
 
-  const monthTitle = currentMonth.toLocaleDateString("ru-RU", {
-    month: "long",
-    year: "numeric",
-  });
+  const monthTitle =
+    currentMonth.toLocaleDateString(
+      "ru-RU",
+      {
+        month: "long",
+        year: "numeric",
+      },
+    );
 
   return (
     <div className="reservations-page">
       <div className="reservations-container">
         <div className="reservations-header">
           <div className="reservations-title-block">
-            <button type="button" className="back-button" onClick={onBack}>
+            <button
+              type="button"
+              className="back-button"
+              onClick={onBack}
+            >
               <ChevronLeft size={18} />
               Назад
             </button>
@@ -1674,7 +1997,10 @@ const [search, setSearch] = useState("");
                 Брони
               </h1>
 
-              <p>Бронирование товаров и управление выдачей</p>
+              <p>
+                Бронирование товаров и управление
+                выдачей
+              </p>
             </div>
           </div>
 
@@ -1691,7 +2017,9 @@ const [search, setSearch] = useState("");
             <button
               type="button"
               className="primary-button"
-              onClick={() => openCreate(getTodayString())}
+              onClick={() =>
+                openCreate(getTodayString())
+              }
             >
               <Plus size={18} />
               Добавить бронь
@@ -1703,7 +2031,10 @@ const [search, setSearch] = useState("");
           <div className="page-error">
             {error}
 
-            <button type="button" onClick={() => setError("")}>
+            <button
+              type="button"
+              onClick={() => setError("")}
+            >
               <X size={16} />
             </button>
           </div>
@@ -1711,37 +2042,46 @@ const [search, setSearch] = useState("");
 
         {productsError && (
           <div className="page-warning">
-            Не удалось загрузить товары МойСклад.
-            <button type="button" onClick={onRefreshProducts}>
+            Не удалось загрузить товары
+            МойСклад.
+
+            <button
+              type="button"
+              onClick={onRefreshProducts}
+            >
               Повторить
             </button>
           </div>
         )}
 
         <div className="reservation-search">
-  <Search size={18} />
+          <Search size={18} />
 
-  <input
-    type="text"
-    value={search}
-    onChange={(event) => setSearch(event.target.value)}
-    placeholder="Поиск по имени, номеру или комментарию..."
-  />
+          <input
+            type="text"
+            value={search}
+            onChange={(event) =>
+              setSearch(event.target.value)
+            }
+            placeholder="Поиск по имени, номеру или комментарию..."
+          />
 
-  {search && (
-    <button
-      type="button"
-      onClick={() => setSearch("")}
-      className="reservation-search-clear"
-    >
-      <X size={16} />
-    </button>
-  )}
-</div>
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="reservation-search-clear"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
 
         <div className="calendar-card">
           <div className="calendar-header">
-            <div className="calendar-month">{monthTitle}</div>
+            <div className="calendar-month">
+              {monthTitle}
+            </div>
 
             <div className="calendar-navigation">
               <button
@@ -1763,7 +2103,11 @@ const [search, setSearch] = useState("");
               <button
                 type="button"
                 className="today-button"
-                onClick={() => setCurrentMonth(getMonthStart(new Date()))}
+                onClick={() =>
+                  setCurrentMonth(
+                    getMonthStart(new Date()),
+                  )
+                }
               >
                 Сегодня
               </button>
@@ -1787,100 +2131,153 @@ const [search, setSearch] = useState("");
           </div>
 
           <div className="weekdays">
-            {["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"].map((day) => (
+            {[
+              "Пн",
+              "Вт",
+              "Ср",
+              "Чт",
+              "Пт",
+              "Сб",
+              "Вс",
+            ].map((day) => (
               <div key={day}>{day}</div>
             ))}
           </div>
 
           <div className="calendar-grid">
-            {calendarDays.map((date, index) => {
-              if (!date) {
+            {calendarDays.map(
+              (date, index) => {
+                if (!date) {
+                  return (
+                    <div
+                      key={`empty-${index}`}
+                      className="calendar-day empty"
+                    />
+                  );
+                }
+
+                const dateString =
+                  dateToString(date);
+
+                const dayReservations =
+                  reservationsByDate[
+                    dateString
+                  ] || [];
+
+                const visibleReservations =
+                  dayReservations.slice(0, 3);
+
+                const additionalCount =
+                  Math.max(
+                    0,
+                    dayReservations.length - 3,
+                  );
+
+                const isToday =
+                  dateString ===
+                  getTodayString();
+
                 return (
-                  <div key={`empty-${index}`} className="calendar-day empty" />
-                );
-              }
-
-              const dateString = dateToString(date);
-
-              const dayReservations = reservationsByDate[dateString] || [];
-
-              const visibleReservations = dayReservations.slice(0, 3);
-
-              const additionalCount = Math.max(0, dayReservations.length - 3);
-
-              const isToday = dateString === getTodayString();
-
-              return (
-                <div
-                  key={dateString}
-                  className={isToday ? "calendar-day today" : "calendar-day"}
-                >
-                  <div className="calendar-day-header">
-                    <span className="calendar-day-number">
-                      {date.getDate()}
-                    </span>
-
-                    {dayReservations.length > 0 && (
-                      <span className="day-count">
-                        {dayReservations.length}
+                  <div
+                    key={dateString}
+                    className={
+                      isToday
+                        ? "calendar-day today"
+                        : "calendar-day"
+                    }
+                  >
+                    <div className="calendar-day-header">
+                      <span className="calendar-day-number">
+                        {date.getDate()}
                       </span>
-                    )}
-                  </div>
 
-                  <div className="day-reservations">
-                    {visibleReservations.map((reservation) => (
+                      {dayReservations.length >
+                        0 && (
+                        <span className="day-count">
+                          {dayReservations.length}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="day-reservations">
+                      {visibleReservations.map(
+                        (reservation) => (
+                          <button
+                            type="button"
+                            key={reservation.id}
+                            className={`calendar-reservation ${getStatusClass(
+                              reservation.status,
+                            )}`}
+                            onClick={() =>
+                              setPreviewReservation(
+                                reservation,
+                              )
+                            }
+                          >
+                            <div className="calendar-reservation-name">
+                              {reservation.customerName ||
+                                "Без имени"}
+                            </div>
+
+                            <div className="calendar-reservation-money">
+                              {formatMoney(
+                                reservation.total,
+                              )}
+                            </div>
+                          </button>
+                        ),
+                      )}
+
+                      {additionalCount > 0 && (
+                        <button
+                          type="button"
+                          className="more-reservations"
+                          onClick={() =>
+                            setListDate(
+                              dateString,
+                            )
+                          }
+                        >
+                          <MoreHorizontal
+                            size={15}
+                          />
+                          + ещё{" "}
+                          {additionalCount}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="calendar-day-footer">
                       <button
                         type="button"
-                        key={reservation.id}
-                        className={`calendar-reservation ${getStatusClass(
-                          reservation.status,
-                        )}`}
-                        onClick={() => setPreviewReservation(reservation)}
+                        className="day-add-button"
+                        onClick={() =>
+                          openCreate(dateString)
+                        }
                       >
-                        <div className="calendar-reservation-name">
-                          {reservation.customerName || "Без имени"}
-                        </div>
-
-                        <div className="calendar-reservation-money">
-                          {formatMoney(reservation.total)}
-                        </div>
+                        <Plus size={15} />
+                        Добавить бронь
                       </button>
-                    ))}
 
-                    {additionalCount > 0 && (
-                      <button
-                        type="button"
-                        className="more-reservations"
-                        onClick={() => setListDate(dateString)}
-                      >
-                        <MoreHorizontal size={15} />+ ещё {additionalCount}
-                      </button>
-                    )}
+                      {dayReservations.length >
+                        0 && (
+                        <button
+                          type="button"
+                          className="day-all-button"
+                          onClick={() =>
+                            setListDate(
+                              dateString,
+                            )
+                          }
+                        >
+                          Все брони
+                        </button>
+                      )}
+                    </div>
                   </div>
-
-                  <div className="calendar-day-footer">
-                    <button
-                      type="button"
-                      className="day-add-button"
-                      onClick={() => openCreate(dateString)}
-                    >
-                      <Plus size={15} />
-                      Добавить бронь
-                    </button>
-
-                    {dayReservations.length > 0 && (
-                      <button
-                        type="button"
-                        className="day-all-button"
-                        onClick={() => setListDate(dateString)}
-                      >
-                        Все брони
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              },
+            )}
           </div>
         </div>
 
@@ -1931,14 +2328,18 @@ const [search, setSearch] = useState("");
       {previewReservation && (
         <ReservationPreviewModal
           reservation={previewReservation}
-          onClose={() => setPreviewReservation(null)}
+          onClose={() =>
+            setPreviewReservation(null)
+          }
           onEdit={openEdit}
           onIssue={handleIssue}
         />
       )}
 
       {productsLoading && (
-        <div className="products-loading-indicator">Загрузка товаров...</div>
+        <div className="products-loading-indicator">
+          Загрузка товаров...
+        </div>
       )}
     </div>
   );

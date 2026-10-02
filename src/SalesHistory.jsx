@@ -12,7 +12,6 @@ import {
 
 import API_URL from "./config.js";
 
-
 function getToday() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Bishkek",
@@ -102,12 +101,12 @@ function getPaymentMethods(payment = {}) {
   }
 
   if (amounts.online_qr > 0) {
-  methods.push({
-    key: "online_qr",
-    name: "Онлайн QR",
-    amount: amounts.online_qr,
-  });
-}
+    methods.push({
+      key: "online_qr",
+      name: "Онлайн QR",
+      amount: amounts.online_qr,
+    });
+  }
 
   /*
    * Для старых продаж, где Som-поля отсутствуют,
@@ -288,9 +287,9 @@ function getSaleAmountForFilter(sale, filter) {
   if (filter === "mplus") {
     return amounts.mplus;
   }
-if (filter === "online_qr") {
-  return amounts.online_qr;
-}
+  if (filter === "online_qr") {
+    return amounts.online_qr;
+  }
   return 0;
 }
 
@@ -350,7 +349,7 @@ function getPaymentFilterName(filter) {
     card: "Карта",
     amanat: "Аманат",
     mplus: "М+",
-     online_qr: "Онлайн QR",
+    online_qr: "Онлайн QR",
     mixed: "Смешанная",
   };
 
@@ -400,107 +399,87 @@ export default function SalesHistory({ onBack }) {
 
   const [salesByDate, setSalesByDate] = useState({});
   const [salespersons, setSalespersons] = useState([]);
-const [updatingSalespersonId, setUpdatingSalespersonId] =
-  useState(null);
+  const [updatingSalespersonId, setUpdatingSalespersonId] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const fetchSalespersons = async () => {
-  try {
-    const response = await fetch(
-      `${API_URL}/api/moysklad/salespersons`,
-    );
+    try {
+      const response = await fetch(`${API_URL}/api/moysklad/salespersons`);
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(
-        data.message || "Не удалось загрузить продавцов",
-      );
+      if (!response.ok) {
+        throw new Error(data.message || "Не удалось загрузить продавцов");
+      }
+
+      setSalespersons(data.salespersons || []);
+    } catch (err) {
+      console.error("Ошибка загрузки продавцов:", err);
+    }
+  };
+
+  const updateSaleSalesperson = async (saleId, salespersonId) => {
+    if (!saleId || !salespersonId) {
+      return;
     }
 
-    setSalespersons(data.salespersons || []);
-  } catch (err) {
-    console.error(
-      "Ошибка загрузки продавцов:",
-      err,
-    );
-  }
-};
+    setUpdatingSalespersonId(saleId);
+    setError(null);
 
-const updateSaleSalesperson = async (
-  saleId,
-  salespersonId,
-) => {
-  if (!saleId || !salespersonId) {
-    return;
-  }
-
-  setUpdatingSalespersonId(saleId);
-  setError(null);
-
-  try {
-    const response = await fetch(
-      `${API_URL}/api/moysklad/sales/${encodeURIComponent(
-        saleId,
-      )}/salesperson`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
+    try {
+      const response = await fetch(
+        `${API_URL}/api/moysklad/sales/${encodeURIComponent(
+          saleId,
+        )}/salesperson`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            salespersonId,
+          }),
         },
-        body: JSON.stringify({
-          salespersonId,
-        }),
-      },
-    );
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      throw new Error(
-        data.message ||
-          "Не удалось изменить продавца",
       );
-    }
 
-    setSalesByDate((prev) => {
-      const next = { ...prev };
+      const data = await response.json();
 
-      Object.keys(next).forEach((date) => {
-        if (!Array.isArray(next[date])) {
-          return;
-        }
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Не удалось изменить продавца");
+      }
 
-        next[date] = next[date].map((sale) => {
-          if (sale?.id !== saleId) {
-            return sale;
+      setSalesByDate((prev) => {
+        const next = { ...prev };
+
+        Object.keys(next).forEach((date) => {
+          if (!Array.isArray(next[date])) {
+            return;
           }
 
-          return {
-            ...sale,
-            salesperson: data.sale.salesperson,
-          };
+          next[date] = next[date].map((sale) => {
+            if (sale?.id !== saleId) {
+              return sale;
+            }
+
+            return {
+              ...sale,
+              salesperson: data.sale.salesperson,
+            };
+          });
         });
+
+        return next;
       });
+    } catch (err) {
+      console.error("Ошибка изменения продавца:", err);
 
-      return next;
-    });
-  } catch (err) {
-    console.error(
-      "Ошибка изменения продавца:",
-      err,
-    );
-
-    setError(
-      err.message ||
-        "Не удалось изменить продавца",
-    );
-  } finally {
-    setUpdatingSalespersonId(null);
-  }
-};
+      setError(err.message || "Не удалось изменить продавца");
+    } finally {
+      setUpdatingSalespersonId(null);
+    }
+  };
   const fetchSales = async () => {
     setLoading(true);
     setError(null);
@@ -528,67 +507,64 @@ const updateSaleSalesperson = async (
 
   useEffect(() => {
     fetchSales();
-      fetchSalespersons();
+    fetchSalespersons();
   }, []);
 
-const filteredSales = useMemo(() => {
-  if (!dateFrom || !dateTo) {
-    return [];
-  }
-
-  if (dateFrom > dateTo) {
-    return [];
-  }
-
-  const result = [];
-
-  Object.entries(salesByDate).forEach(([date, sales]) => {
-    if (!Array.isArray(sales)) {
-      return;
+  const filteredSales = useMemo(() => {
+    if (!dateFrom || !dateTo) {
+      return [];
     }
 
-    sales.forEach((sale) => {
-      // Определяем реальную дату продажи по времени Бишкек,
-      // а не по UTC-дате createdAt и не только по ключу byDate.
-      const saleLocalDate = getSaleLocalDate(sale);
+    if (dateFrom > dateTo) {
+      return [];
+    }
 
-      if (
-        !saleLocalDate ||
-        saleLocalDate < dateFrom ||
-        saleLocalDate > dateTo
-      ) {
+    const result = [];
+
+    Object.entries(salesByDate).forEach(([date, sales]) => {
+      if (!Array.isArray(sales)) {
         return;
       }
 
-      if (!matchesPaymentFilter(sale, paymentFilter)) {
-        return;
-      }
+      sales.forEach((sale) => {
+        // Определяем реальную дату продажи по времени Бишкек,
+        // а не по UTC-дате createdAt и не только по ключу byDate.
+        const saleLocalDate = getSaleLocalDate(sale);
 
-      const filteredAmount = getSaleAmountForFilter(
-        sale,
-        paymentFilter,
-      );
+        if (
+          !saleLocalDate ||
+          saleLocalDate < dateFrom ||
+          saleLocalDate > dateTo
+        ) {
+          return;
+        }
 
-      result.push({
-        ...sale,
+        if (!matchesPaymentFilter(sale, paymentFilter)) {
+          return;
+        }
 
-        // Для отображения тоже используем локальную дату продажи.
-        date: saleLocalDate,
+        const filteredAmount = getSaleAmountForFilter(sale, paymentFilter);
 
-        filteredAmount,
+        result.push({
+          ...sale,
+
+          // Для отображения тоже используем локальную дату продажи.
+          date: saleLocalDate,
+
+          filteredAmount,
+        });
       });
     });
-  });
 
-  result.sort((a, b) => {
-    const dateA = new Date(a.createdAt || 0).getTime();
-    const dateB = new Date(b.createdAt || 0).getTime();
+    result.sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
 
-    return dateB - dateA;
-  });
+      return dateB - dateA;
+    });
 
-  return result;
-}, [salesByDate, dateFrom, dateTo, paymentFilter]);
+    return result;
+  }, [salesByDate, dateFrom, dateTo, paymentFilter]);
 
   const totalSum = useMemo(() => {
     return filteredSales.reduce(
@@ -886,19 +862,21 @@ const filteredSales = useMemo(() => {
                       </div>
                     </div>
                     {/* SALESPERSON */}
-                   {/* SALESPERSON */}
-<div style={styles.salespersonCell}>
+                    {/* SALESPERSON */}
+                   <div style={styles.salespersonCell}>
   <select
-    value={sale.salesperson?.id || ""}
+    value={
+      salespersons.find(
+        (person) =>
+          person.id === sale.salesperson?.id ||
+          person.name === sale.salesperson?.id ||
+          person.name === sale.salesperson?.name
+      )?.id || ""
+    }
     onChange={(e) =>
-      updateSaleSalesperson(
-        sale.id,
-        e.target.value,
-      )
+      updateSaleSalesperson(sale.id, e.target.value)
     }
-    disabled={
-      updatingSalespersonId === sale.id
-    }
+    disabled={updatingSalespersonId === sale.id}
     style={styles.salespersonSelect}
   >
     <option value="" disabled>
@@ -906,20 +884,11 @@ const filteredSales = useMemo(() => {
     </option>
 
     {salespersons.map((person) => (
-      <option
-        key={person.id}
-        value={person.id}
-      >
+      <option key={person.id} value={person.id}>
         {person.name}
       </option>
     ))}
   </select>
-
-  {updatingSalespersonId === sale.id && (
-    <div style={styles.salespersonSaving}>
-      Сохранение...
-    </div>
-  )}
 </div>
                     {/* AMOUNT */}
                     <div style={styles.amountCell}>
@@ -935,7 +904,7 @@ const filteredSales = useMemo(() => {
                               card: "Карта",
                               amanat: "Аманат",
                               mplus: "М+",
-                                online_qr: "Онлайн QR",
+                              online_qr: "Онлайн QR",
                             }[paymentFilter]
                           }
                         </div>
@@ -1470,24 +1439,24 @@ const styles = {
     lineHeight: 1.5,
   },
   salespersonSelect: {
-  width: "100%",
-  minWidth: "140px",
-  height: "36px",
-  padding: "0 10px",
-  border: "1px solid #cbd5e1",
-  borderRadius: "9px",
-  background: "#ffffff",
-  color: "#0f172a",
-  fontSize: "14px",
-  fontWeight: 600,
-  cursor: "pointer",
-  outline: "none",
-  boxSizing: "border-box",
-},
+    width: "100%",
+    minWidth: "140px",
+    height: "36px",
+    padding: "0 10px",
+    border: "1px solid #cbd5e1",
+    borderRadius: "9px",
+    background: "#ffffff",
+    color: "#0f172a",
+    fontSize: "14px",
+    fontWeight: 600,
+    cursor: "pointer",
+    outline: "none",
+    boxSizing: "border-box",
+  },
 
-salespersonSaving: {
-  marginTop: "4px",
-  fontSize: "11px",
-  color: "#64748b",
-},
+  salespersonSaving: {
+    marginTop: "4px",
+    fontSize: "11px",
+    color: "#64748b",
+  },
 };
