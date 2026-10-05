@@ -8,6 +8,7 @@ import {
   CreditCard,
   WalletCards,
   Clock,
+  XCircle,
 } from "lucide-react";
 
 import API_URL from "./config.js";
@@ -42,17 +43,6 @@ function formatMoney(value) {
   });
 }
 
-/*
- * Все эти значения должны быть именно в СОМ:
- *
- * payment.cashSom
- * payment.cardSom
- * payment.amanatSom
- * payment.mplusSom
- *
- * Не используем payment.cash/card/amanat/mplus,
- * потому что они могут храниться в копейках.
- */
 function getPaymentAmounts(payment = {}) {
   return {
     cash: Number(payment.cashSom || 0),
@@ -108,13 +98,6 @@ function getPaymentMethods(payment = {}) {
     });
   }
 
-  /*
-   * Для старых продаж, где Som-поля отсутствуют,
-   * определяем только название способа.
-   *
-   * Сумму здесь специально не берём из cash/card/etc.,
-   * чтобы снова не получить ×100.
-   */
   if (methods.length === 0 && payment.method) {
     const methodMap = {
       cash: "Наличные",
@@ -200,7 +183,9 @@ function getPaymentName(payment = {}) {
         <div style={styles.paymentBreakdown}>
           {methods.map((method, index) => (
             <React.Fragment key={method.key}>
-              {index > 0 && <span style={styles.paymentPlus}>{" + "}</span>}
+              {index > 0 && (
+                <span style={styles.paymentPlus}>{" + "}</span>
+              )}
 
               <span>
                 {method.name} {formatMoney(method.amount)} сом
@@ -254,6 +239,14 @@ function getPaymentIcon(payment = {}) {
 }
 
 function getSaleAmountForFilter(sale, filter) {
+  /*
+   * Отменённые продажи никогда не должны попадать
+   * в расчёты.
+   */
+  if (sale?.cancelled) {
+    return 0;
+  }
+
   const totalSom = Number(sale.totalSom || 0);
 
   if (filter === "all") {
@@ -287,9 +280,11 @@ function getSaleAmountForFilter(sale, filter) {
   if (filter === "mplus") {
     return amounts.mplus;
   }
+
   if (filter === "online_qr") {
     return amounts.online_qr;
   }
+
   return 0;
 }
 
@@ -356,16 +351,6 @@ function getPaymentFilterName(filter) {
   return names[filter] || "Все способы";
 }
 
-/*
- * Получаем товары для отображения в истории.
- *
- * Пример:
- *
- * [
- *   "Футболка × 2",
- *   "Кроссовки × 1"
- * ]
- */
 function getSaleItems(sale) {
   if (!Array.isArray(sale.items)) {
     return [];
@@ -401,17 +386,23 @@ export default function SalesHistory({ onBack }) {
   const [salespersons, setSalespersons] = useState([]);
   const [updatingSalespersonId, setUpdatingSalespersonId] = useState(null);
 
+  const [cancellingSaleId, setCancellingSaleId] = useState(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const fetchSalespersons = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/moysklad/salespersons`);
+      const response = await fetch(
+        `${API_URL}/api/moysklad/salespersons`,
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Не удалось загрузить продавцов");
+        throw new Error(
+          data.message || "Не удалось загрузить продавцов",
+        );
       }
 
       setSalespersons(data.salespersons || []);
@@ -447,7 +438,9 @@ export default function SalesHistory({ onBack }) {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || "Не удалось изменить продавца");
+        throw new Error(
+          data.message || "Не удалось изменить продавца",
+        );
       }
 
       setSalesByDate((prev) => {
@@ -475,29 +468,125 @@ export default function SalesHistory({ onBack }) {
     } catch (err) {
       console.error("Ошибка изменения продавца:", err);
 
-      setError(err.message || "Не удалось изменить продавца");
+      setError(
+        err.message || "Не удалось изменить продавца",
+      );
     } finally {
       setUpdatingSalespersonId(null);
     }
   };
+
+  /*
+   * ОТМЕНА ПРОДАЖИ
+   */
+  const cancelSale = async (sale) => {
+    if (!sale?.id) {
+      return;
+    }
+
+    if (sale.cancelled) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Отменить продажу на сумму ${formatMoney(
+        sale.totalSom,
+      )} сом?\n\nПродажа останется в истории, но больше не будет учитываться в отчётах и итогах.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setCancellingSaleId(sale.id);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/moysklad/sales/${encodeURIComponent(
+          sale.id,
+        )}/cancel`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Не удалось отменить продажу",
+        );
+      }
+
+      setSalesByDate((prev) => {
+        const next = { ...prev };
+
+        Object.keys(next).forEach((date) => {
+          if (!Array.isArray(next[date])) {
+            return;
+          }
+
+          next[date] = next[date].map((currentSale) => {
+            if (currentSale?.id !== sale.id) {
+              return currentSale;
+            }
+
+            return {
+              ...currentSale,
+              ...(data.sale || {}),
+              cancelled: true,
+              cancelledAt:
+                data.sale?.cancelledAt ||
+                new Date().toISOString(),
+            };
+          });
+        });
+
+        return next;
+      });
+    } catch (err) {
+      console.error("Ошибка отмены продажи:", err);
+
+      setError(
+        err.message || "Не удалось отменить продажу",
+      );
+    } finally {
+      setCancellingSaleId(null);
+    }
+  };
+
   const fetchSales = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/moysklad/sales`);
+      const response = await fetch(
+        `${API_URL}/api/moysklad/sales`,
+      );
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || "Не удалось загрузить историю продаж");
+        throw new Error(
+          data.message || "Не удалось загрузить историю продаж",
+        );
       }
 
       setSalesByDate(data.byDate || {});
     } catch (err) {
-      console.error("Ошибка загрузки истории продаж:", err);
+      console.error(
+        "Ошибка загрузки истории продаж:",
+        err,
+      );
 
-      setError(err.message || "Не удалось загрузить историю продаж");
+      setError(
+        err.message ||
+          "Не удалось загрузить историю продаж",
+      );
 
       setSalesByDate({});
     } finally {
@@ -527,8 +616,6 @@ export default function SalesHistory({ onBack }) {
       }
 
       sales.forEach((sale) => {
-        // Определяем реальную дату продажи по времени Бишкек,
-        // а не по UTC-дате createdAt и не только по ключу byDate.
         const saleLocalDate = getSaleLocalDate(sale);
 
         if (
@@ -543,34 +630,51 @@ export default function SalesHistory({ onBack }) {
           return;
         }
 
-        const filteredAmount = getSaleAmountForFilter(sale, paymentFilter);
+        const filteredAmount = getSaleAmountForFilter(
+          sale,
+          paymentFilter,
+        );
 
         result.push({
           ...sale,
-
-          // Для отображения тоже используем локальную дату продажи.
           date: saleLocalDate,
-
           filteredAmount,
         });
       });
     });
 
     result.sort((a, b) => {
-      const dateA = new Date(a.createdAt || 0).getTime();
-      const dateB = new Date(b.createdAt || 0).getTime();
+      const dateA = new Date(
+        a.createdAt || 0,
+      ).getTime();
+
+      const dateB = new Date(
+        b.createdAt || 0,
+      ).getTime();
 
       return dateB - dateA;
     });
 
     return result;
-  }, [salesByDate, dateFrom, dateTo, paymentFilter]);
+  }, [
+    salesByDate,
+    dateFrom,
+    dateTo,
+    paymentFilter,
+  ]);
 
   const totalSum = useMemo(() => {
     return filteredSales.reduce(
-      (sum, sale) => sum + Number(sale.filteredAmount || 0),
+      (sum, sale) =>
+        sum + Number(sale.filteredAmount || 0),
       0,
     );
+  }, [filteredSales]);
+
+  const activeSalesCount = useMemo(() => {
+    return filteredSales.filter(
+      (sale) => !sale.cancelled,
+    ).length;
   }, [filteredSales]);
 
   const setToday = () => {
@@ -600,14 +704,22 @@ export default function SalesHistory({ onBack }) {
         {/* HEADER */}
         <div style={styles.header}>
           <div style={styles.headerLeft}>
-            <button type="button" onClick={onBack} style={styles.backButton}>
+            <button
+              type="button"
+              onClick={onBack}
+              style={styles.backButton}
+            >
               <ArrowLeft size={20} />
             </button>
 
             <div>
-              <h1 style={styles.title}>История продаж</h1>
+              <h1 style={styles.title}>
+                История продаж
+              </h1>
 
-              <div style={styles.subtitle}>Локальная история продаж кассы</div>
+              <div style={styles.subtitle}>
+                Локальная история продаж кассы
+              </div>
             </div>
           </div>
 
@@ -619,10 +731,16 @@ export default function SalesHistory({ onBack }) {
           >
             <RefreshCw
               size={18}
-              style={loading ? styles.refreshIconLoading : undefined}
+              style={
+                loading
+                  ? styles.refreshIconLoading
+                  : undefined
+              }
             />
 
-            {loading ? "Обновление..." : "Обновить"}
+            {loading
+              ? "Обновление..."
+              : "Обновить"}
           </button>
         </div>
 
@@ -637,7 +755,9 @@ export default function SalesHistory({ onBack }) {
             <input
               type="date"
               value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+              onChange={(e) =>
+                setDateFrom(e.target.value)
+              }
               style={styles.dateInput}
             />
           </div>
@@ -651,7 +771,9 @@ export default function SalesHistory({ onBack }) {
             <input
               type="date"
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              onChange={(e) =>
+                setDateTo(e.target.value)
+              }
               style={styles.dateInput}
             />
           </div>
@@ -664,21 +786,38 @@ export default function SalesHistory({ onBack }) {
 
             <select
               value={paymentFilter}
-              onChange={(e) => setPaymentFilter(e.target.value)}
+              onChange={(e) =>
+                setPaymentFilter(e.target.value)
+              }
               style={styles.select}
             >
-              <option value="all">Все способы</option>
+              <option value="all">
+                Все способы
+              </option>
 
-              <option value="cash">Наличные</option>
+              <option value="cash">
+                Наличные
+              </option>
 
-              <option value="card">Карта</option>
+              <option value="card">
+                Карта
+              </option>
 
-              <option value="amanat">Аманат</option>
+              <option value="amanat">
+                Аманат
+              </option>
 
-              <option value="mplus">М+</option>
-              <option value="online_qr">Онлайн QR</option>
+              <option value="mplus">
+                М+
+              </option>
 
-              <option value="mixed">Смешанная</option>
+              <option value="online_qr">
+                Онлайн QR
+              </option>
+
+              <option value="mixed">
+                Смешанная
+              </option>
             </select>
           </div>
 
@@ -716,9 +855,13 @@ export default function SalesHistory({ onBack }) {
             </div>
 
             <div>
-              <div style={styles.summaryLabel}>Продаж</div>
+              <div style={styles.summaryLabel}>
+                Продаж
+              </div>
 
-              <div style={styles.summaryValue}>{filteredSales.length}</div>
+              <div style={styles.summaryValue}>
+                {activeSalesCount}
+              </div>
             </div>
           </div>
 
@@ -728,9 +871,13 @@ export default function SalesHistory({ onBack }) {
             </div>
 
             <div>
-              <div style={styles.summaryLabel}>Сумма</div>
+              <div style={styles.summaryLabel}>
+                Сумма
+              </div>
 
-              <div style={styles.summaryValue}>{formatMoney(totalSum)} сом</div>
+              <div style={styles.summaryValue}>
+                {formatMoney(totalSum)} сом
+              </div>
             </div>
           </div>
 
@@ -740,7 +887,9 @@ export default function SalesHistory({ onBack }) {
             </div>
 
             <div>
-              <div style={styles.summaryLabel}>Фильтр</div>
+              <div style={styles.summaryLabel}>
+                Фильтр
+              </div>
 
               <div
                 style={{
@@ -748,7 +897,9 @@ export default function SalesHistory({ onBack }) {
                   fontSize: 18,
                 }}
               >
-                {getPaymentFilterName(paymentFilter)}
+                {getPaymentFilterName(
+                  paymentFilter,
+                )}
               </div>
             </div>
           </div>
@@ -757,10 +908,18 @@ export default function SalesHistory({ onBack }) {
         {/* TABLE */}
         <div style={styles.tableCard}>
           <div style={styles.tableHeader}>
-            <div style={styles.tableHeaderCell}>Продажа</div>
+            <div style={styles.tableHeaderCell}>
+              Продажа
+            </div>
 
-            <div style={styles.tableHeaderCell}>Способ оплаты</div>
-            <div style={styles.tableHeaderCell}>Продавец</div>
+            <div style={styles.tableHeaderCell}>
+              Способ оплаты
+            </div>
+
+            <div style={styles.tableHeaderCell}>
+              Продавец
+            </div>
+
             <div
               style={{
                 ...styles.tableHeaderCell,
@@ -769,159 +928,397 @@ export default function SalesHistory({ onBack }) {
             >
               Сумма
             </div>
+
+            <div style={styles.tableHeaderCell}>
+              Действие
+            </div>
           </div>
 
           {loading ? (
             <div style={styles.emptyState}>
-              <RefreshCw size={28} style={styles.refreshIconLoading} />
+              <RefreshCw
+                size={28}
+                style={styles.refreshIconLoading}
+              />
 
-              <div>Загрузка истории продаж...</div>
+              <div>
+                Загрузка истории продаж...
+              </div>
             </div>
           ) : filteredSales.length === 0 ? (
             <div style={styles.emptyState}>
               <ShoppingCart size={40} />
 
-              <div style={styles.emptyTitle}>Продажи не найдены</div>
+              <div style={styles.emptyTitle}>
+                Продажи не найдены
+              </div>
 
               <div style={styles.emptyText}>
-                За выбранный период и способ оплаты продаж нет
+                За выбранный период и способ оплаты
+                продаж нет
               </div>
             </div>
           ) : (
             <>
               {filteredSales.map((sale, index) => {
-                const payment = sale.payment || {};
+                const payment =
+                  sale.payment || {};
 
-                const paymentType = getPaymentType(payment);
+                const paymentType =
+                  getPaymentType(payment);
 
-                const Icon = getPaymentIcon(payment);
+                const Icon =
+                  getPaymentIcon(payment);
 
                 const isFilteredMethod =
-                  paymentFilter !== "all" && paymentFilter !== "mixed";
+                  paymentFilter !== "all" &&
+                  paymentFilter !== "mixed";
 
-                const fullTotal = Number(sale.totalSom || 0);
+                const fullTotal = Number(
+                  sale.totalSom || 0,
+                );
 
-                const saleItems = getSaleItems(sale);
+                const saleItems =
+                  getSaleItems(sale);
+
+                const isCancelled =
+                  sale.cancelled === true;
+
+                const isCancelling =
+                  cancellingSaleId === sale.id;
 
                 return (
                   <div
                     key={
-                      sale.id || sale.orderId || `${sale.createdAt}-${index}`
+                      sale.id ||
+                      sale.orderId ||
+                      `${sale.createdAt}-${index}`
                     }
-                    style={styles.tableRow}
+                    style={{
+                      ...styles.tableRow,
+
+                      ...(isCancelled
+                        ? styles.cancelledRow
+                        : {}),
+                    }}
                   >
                     {/* SALE / PRODUCTS */}
                     <div style={styles.saleCell}>
-                      <div style={styles.saleIcon}>
-                        <ShoppingCart size={18} />
+                      <div
+                        style={{
+                          ...styles.saleIcon,
+                          ...(isCancelled
+                            ? styles.cancelledIcon
+                            : {}),
+                        }}
+                      >
+                        {isCancelled ? (
+                          <XCircle size={18} />
+                        ) : (
+                          <ShoppingCart size={18} />
+                        )}
                       </div>
 
-                      <div style={styles.productsContent}>
+                      <div
+                        style={
+                          styles.productsContent
+                        }
+                      >
                         {saleItems.length > 0 ? (
                           saleItems.map((item) => (
-                            <div key={item.id} style={styles.productRow}>
-                              <span style={styles.productName}>
+                            <div
+                              key={item.id}
+                              style={
+                                styles.productRow
+                              }
+                            >
+                              <span
+                                style={{
+                                  ...styles.productName,
+
+                                  ...(isCancelled
+                                    ? styles.cancelledText
+                                    : {}),
+                                }}
+                              >
                                 {item.name}
                               </span>
 
-                              <span style={styles.productQuantity}>
+                              <span
+                                style={{
+                                  ...styles.productQuantity,
+
+                                  ...(isCancelled
+                                    ? styles.cancelledText
+                                    : {}),
+                                }}
+                              >
                                 × {item.quantity}
                               </span>
                             </div>
                           ))
                         ) : (
-                          <div style={styles.productName}>
+                          <div
+                            style={{
+                              ...styles.productName,
+
+                              ...(isCancelled
+                                ? styles.cancelledText
+                                : {}),
+                            }}
+                          >
                             Товары не указаны
                           </div>
                         )}
 
-                        <div style={styles.saleMeta}>
+                        <div
+                          style={{
+                            ...styles.saleMeta,
+
+                            ...(isCancelled
+                              ? styles.cancelledMeta
+                              : {}),
+                          }}
+                        >
                           <Clock size={13} />
 
-                          {formatTime(sale.createdAt)}
+                          {formatTime(
+                            sale.createdAt,
+                          )}
 
-                          <span>{formatDate(sale.date)}</span>
+                          <span>
+                            {formatDate(sale.date)}
+                          </span>
                         </div>
+
+                        {isCancelled && (
+                          <div
+                            style={
+                              styles.cancelledBadge
+                            }
+                          >
+                            ПРОДАЖА ОТМЕНЕНА
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     {/* PAYMENT */}
                     <div style={styles.paymentCell}>
-                      <div style={styles.paymentIcon}>
+                      <div
+                        style={{
+                          ...styles.paymentIcon,
+
+                          ...(isCancelled
+                            ? styles.cancelledPaymentIcon
+                            : {}),
+                        }}
+                      >
                         <Icon size={17} />
                       </div>
 
-                      <div style={styles.paymentContent}>
+                      <div
+                        style={
+                          styles.paymentContent
+                        }
+                      >
                         {getPaymentName(payment)}
 
-                        {isFilteredMethod && paymentType === "mixed" && (
-                          <div style={styles.filteredPaymentHint}>
-                            Из общей суммы {formatMoney(fullTotal)} сом
-                          </div>
-                        )}
+                        {isFilteredMethod &&
+                          paymentType ===
+                            "mixed" && (
+                            <div
+                              style={
+                                styles.filteredPaymentHint
+                              }
+                            >
+                              Из общей суммы{" "}
+                              {formatMoney(
+                                fullTotal,
+                              )}{" "}
+                              сом
+                            </div>
+                          )}
                       </div>
                     </div>
-                    {/* SALESPERSON */}
-                    {/* SALESPERSON */}
-                   <div style={styles.salespersonCell}>
-  <select
-    value={
-      salespersons.find(
-        (person) =>
-          person.id === sale.salesperson?.id ||
-          person.name === sale.salesperson?.id ||
-          person.name === sale.salesperson?.name
-      )?.id || ""
-    }
-    onChange={(e) =>
-      updateSaleSalesperson(sale.id, e.target.value)
-    }
-    disabled={updatingSalespersonId === sale.id}
-    style={styles.salespersonSelect}
-  >
-    <option value="" disabled>
-      Не указан
-    </option>
 
-    {salespersons.map((person) => (
-      <option key={person.id} value={person.id}>
-        {person.name}
-      </option>
-    ))}
-  </select>
-</div>
+                    {/* SALESPERSON */}
+                    <div
+                      style={
+                        styles.salespersonCell
+                      }
+                    >
+                      <select
+                        value={
+                          salespersons.find(
+                            (person) =>
+                              person.id ===
+                                sale.salesperson
+                                  ?.id ||
+                              person.name ===
+                                sale.salesperson
+                                  ?.id ||
+                              person.name ===
+                                sale.salesperson
+                                  ?.name,
+                          )?.id || ""
+                        }
+                        onChange={(e) =>
+                          updateSaleSalesperson(
+                            sale.id,
+                            e.target.value,
+                          )
+                        }
+                        disabled={
+                          updatingSalespersonId ===
+                          sale.id
+                        }
+                        style={{
+                          ...styles.salespersonSelect,
+
+                          ...(isCancelled
+                            ? styles.cancelledSelect
+                            : {}),
+                        }}
+                      >
+                        <option
+                          value=""
+                          disabled
+                        >
+                          Не указан
+                        </option>
+
+                        {salespersons.map(
+                          (person) => (
+                            <option
+                              key={person.id}
+                              value={person.id}
+                            >
+                              {person.name}
+                            </option>
+                          ),
+                        )}
+                      </select>
+                    </div>
+
                     {/* AMOUNT */}
-                    <div style={styles.amountCell}>
-                      <div style={styles.amount}>
-                        {formatMoney(sale.filteredAmount)} сом
+                    <div
+                      style={styles.amountCell}
+                    >
+                      <div
+                        style={{
+                          ...styles.amount,
+
+                          ...(isCancelled
+                            ? styles.cancelledAmount
+                            : {}),
+                        }}
+                      >
+                        {formatMoney(
+                          sale.filteredAmount,
+                        )}{" "}
+                        сом
                       </div>
 
-                      {isFilteredMethod && paymentType === "mixed" && (
-                        <div style={styles.amountHint}>
-                          {
+                      {isFilteredMethod &&
+                        paymentType ===
+                          "mixed" && (
+                          <div
+                            style={
+                              styles.amountHint
+                            }
+                          >
                             {
-                              cash: "Наличные",
-                              card: "Карта",
-                              amanat: "Аманат",
-                              mplus: "М+",
-                              online_qr: "Онлайн QR",
-                            }[paymentFilter]
+                              {
+                                cash: "Наличные",
+                                card: "Карта",
+                                amanat:
+                                  "Аманат",
+                                mplus: "М+",
+                                online_qr:
+                                  "Онлайн QR",
+                              }[
+                                paymentFilter
+                              ]
+                            }
+                          </div>
+                        )}
+
+                      {paymentType ===
+                        "mixed" &&
+                        paymentFilter ===
+                          "all" && (
+                          <div
+                            style={
+                              styles.amountHint
+                            }
+                          >
+                            Общая сумма продажи
+                          </div>
+                        )}
+
+                      {paymentType ===
+                        "mixed" &&
+                        paymentFilter ===
+                          "mixed" && (
+                          <div
+                            style={
+                              styles.amountHint
+                            }
+                          >
+                            Все способы
+                          </div>
+                        )}
+
+                      {paymentType ===
+                        "single" &&
+                        paymentFilter ===
+                          "all" && (
+                          <div
+                            style={
+                              styles.amountHint
+                            }
+                          >
+                            {getPaymentMethods(
+                              payment,
+                            )[0]?.name ||
+                              "Оплата"}
+                          </div>
+                        )}
+                    </div>
+
+                    {/* ACTION */}
+                    <div
+                      style={
+                        styles.actionCell
+                      }
+                    >
+                      {isCancelled ? (
+                        <div
+                          style={
+                            styles.cancelledAlready
                           }
+                        >
+                          <XCircle size={16} />
+                          Отменена
                         </div>
-                      )}
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            cancelSale(sale)
+                          }
+                          disabled={isCancelling}
+                          style={
+                            styles.cancelButton
+                          }
+                        >
+                          <XCircle size={16} />
 
-                      {paymentType === "mixed" && paymentFilter === "all" && (
-                        <div style={styles.amountHint}>Общая сумма продажи</div>
-                      )}
-
-                      {paymentType === "mixed" && paymentFilter === "mixed" && (
-                        <div style={styles.amountHint}>Все способы</div>
-                      )}
-
-                      {paymentType === "single" && paymentFilter === "all" && (
-                        <div style={styles.amountHint}>
-                          {getPaymentMethods(payment)[0]?.name || "Оплата"}
-                        </div>
+                          {isCancelling
+                            ? "Отмена..."
+                            : "Отменить"}
+                        </button>
                       )}
                     </div>
                   </div>
@@ -930,16 +1327,26 @@ export default function SalesHistory({ onBack }) {
 
               {/* TOTAL */}
               <div style={styles.tableFooter}>
-                <div style={styles.footerLeft}>Итого</div>
-
-                <div style={styles.footerCenter}>
-                  {filteredSales.length}{" "}
-                  {filteredSales.length === 1 ? "продажа" : "продаж"}
+                <div style={styles.footerLeft}>
+                  Итого
                 </div>
 
-                <div style={styles.footerTotal}>
+                <div
+                  style={styles.footerCenter}
+                >
+                  {activeSalesCount}{" "}
+                  {activeSalesCount === 1
+                    ? "продажа"
+                    : "продаж"}
+                </div>
+
+                <div
+                  style={styles.footerTotal}
+                >
                   {formatMoney(totalSum)} сом
                 </div>
+
+                <div />
               </div>
             </>
           )}
@@ -947,25 +1354,30 @@ export default function SalesHistory({ onBack }) {
 
         {/* INFO */}
         <div style={styles.infoCard}>
-          <div style={styles.infoTitle}>Как работает фильтр оплаты</div>
+          <div style={styles.infoTitle}>
+            Как работает отмена продажи
+          </div>
 
           <div style={styles.infoText}>
             <div>
-              <strong>Все способы</strong> — показывает все продажи и считает
-              полную сумму каждой продажи.
+              <strong>
+                Отменить продажу
+              </strong>{" "}
+              — продажа не удаляется из истории,
+              а только помечается как отменённая.
             </div>
 
             <div>
-              <strong>Наличные / Карта / Аманат / М+</strong> — показывает
-              обычные продажи этим способом, а также смешанные продажи, где этот
-              способ присутствует. В итог попадает только сумма выбранного
-              способа.
+              Отменённая продажа отображается
+              красным цветом и не учитывается в
+              итоговой сумме и количестве активных
+              продаж.
             </div>
 
             <div>
-              <strong>Смешанная</strong> — показывает только продажи, где
-              использовано два или больше способов оплаты, и считает их полную
-              сумму.
+              Это позволяет сохранить историю
+              операции и при этом исключить её из
+              отчётов.
             </div>
           </div>
         </div>
@@ -986,7 +1398,7 @@ const styles = {
   },
 
   container: {
-    maxWidth: "1400px",
+    maxWidth: "1500px",
     margin: "0 auto",
   },
 
@@ -1123,19 +1535,6 @@ const styles = {
     whiteSpace: "nowrap",
   },
 
-  filterInfo: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "20px",
-    background: "#f1f5f9",
-    borderRadius: "12px",
-    padding: "12px 16px",
-    marginBottom: "16px",
-    color: "#475569",
-    fontSize: "14px",
-  },
-
   error: {
     background: "#fef2f2",
     border: "1px solid #fecaca",
@@ -1148,7 +1547,8 @@ const styles = {
 
   summaryGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gridTemplateColumns:
+      "repeat(3, minmax(0, 1fr))",
     gap: "16px",
     marginBottom: "18px",
   },
@@ -1196,28 +1596,16 @@ const styles = {
 
   tableHeader: {
     display: "grid",
-    gridTemplateColumns: "1.3fr 1.5fr 0.9fr 0.7fr",
+    gridTemplateColumns:
+      "1.25fr 1.35fr 0.9fr 0.65fr 0.8fr",
     background: "#f8fafc",
     borderBottom: "1px solid #e2e8f0",
     padding: "14px 20px",
     gap: "20px",
   },
+
   salespersonCell: {
     minWidth: 0,
-  },
-
-  salespersonName: {
-    fontSize: "14px",
-    fontWeight: 650,
-    color: "#0f172a",
-    wordBreak: "break-word",
-  },
-
-  salespersonId: {
-    marginTop: "4px",
-    color: "#94a3b8",
-    fontSize: "11px",
-    wordBreak: "break-word",
   },
 
   tableHeaderCell: {
@@ -1230,11 +1618,18 @@ const styles = {
 
   tableRow: {
     display: "grid",
-    gridTemplateColumns: "1.3fr 1.5fr 0.9fr 0.7fr",
+    gridTemplateColumns:
+      "1.25fr 1.35fr 0.9fr 0.65fr 0.8fr",
     padding: "18px 20px",
     gap: "20px",
     alignItems: "center",
     borderBottom: "1px solid #f1f5f9",
+    transition:
+      "background 0.2s ease, opacity 0.2s ease",
+  },
+
+  cancelledRow: {
+    background: "#fff7f7",
   },
 
   saleCell: {
@@ -1254,6 +1649,11 @@ const styles = {
     justifyContent: "center",
     color: "#334155",
     flexShrink: 0,
+  },
+
+  cancelledIcon: {
+    background: "#fee2e2",
+    color: "#dc2626",
   },
 
   productsContent: {
@@ -1283,13 +1683,9 @@ const styles = {
     whiteSpace: "nowrap",
   },
 
-  orderId: {
-    fontSize: "15px",
-    fontWeight: 700,
-    color: "#0f172a",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
+  cancelledText: {
+    color: "#b91c1c",
+    textDecoration: "line-through",
   },
 
   saleMeta: {
@@ -1299,6 +1695,23 @@ const styles = {
     marginTop: "7px",
     color: "#94a3b8",
     fontSize: "12px",
+  },
+
+  cancelledMeta: {
+    color: "#ef4444",
+  },
+
+  cancelledBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    marginTop: "8px",
+    padding: "4px 8px",
+    borderRadius: "6px",
+    background: "#fee2e2",
+    color: "#b91c1c",
+    fontSize: "10px",
+    fontWeight: 800,
+    letterSpacing: "0.3px",
   },
 
   paymentCell: {
@@ -1319,6 +1732,12 @@ const styles = {
     justifyContent: "center",
     color: "#475569",
     flexShrink: 0,
+  },
+
+  cancelledPaymentIcon: {
+    background: "#fee2e2",
+    borderColor: "#fecaca",
+    color: "#dc2626",
   },
 
   paymentContent: {
@@ -1361,15 +1780,81 @@ const styles = {
     whiteSpace: "nowrap",
   },
 
+  cancelledAmount: {
+    color: "#dc2626",
+    textDecoration: "line-through",
+  },
+
   amountHint: {
     marginTop: "4px",
     color: "#94a3b8",
     fontSize: "11px",
   },
 
+  salespersonSelect: {
+    width: "100%",
+    minWidth: "120px",
+    height: "36px",
+    padding: "0 10px",
+    border: "1px solid #cbd5e1",
+    borderRadius: "9px",
+    background: "#ffffff",
+    color: "#0f172a",
+    fontSize: "14px",
+    fontWeight: 600,
+    cursor: "pointer",
+    outline: "none",
+    boxSizing: "border-box",
+  },
+
+  cancelledSelect: {
+    borderColor: "#fecaca",
+    background: "#fff1f2",
+    color: "#b91c1c",
+  },
+
+  actionCell: {
+    display: "flex",
+    justifyContent: "flex-end",
+    minWidth: 0,
+  },
+
+  cancelButton: {
+    height: "36px",
+    padding: "0 11px",
+    border: "1px solid #fecaca",
+    borderRadius: "9px",
+    background: "#fff1f2",
+    color: "#dc2626",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "6px",
+    cursor: "pointer",
+    fontSize: "12px",
+    fontWeight: 700,
+    whiteSpace: "nowrap",
+  },
+
+  cancelledAlready: {
+    height: "36px",
+    padding: "0 10px",
+    borderRadius: "9px",
+    background: "#fee2e2",
+    color: "#b91c1c",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "6px",
+    fontSize: "12px",
+    fontWeight: 700,
+    whiteSpace: "nowrap",
+  },
+
   tableFooter: {
     display: "grid",
-    gridTemplateColumns: "1.3fr 1.5fr 0.9fr 0.7fr",
+    gridTemplateColumns:
+      "1.25fr 1.35fr 0.9fr 0.65fr 0.8fr",
     padding: "18px 20px",
     gap: "20px",
     alignItems: "center",
@@ -1438,25 +1923,5 @@ const styles = {
     fontSize: "13px",
     lineHeight: 1.5,
   },
-  salespersonSelect: {
-    width: "100%",
-    minWidth: "140px",
-    height: "36px",
-    padding: "0 10px",
-    border: "1px solid #cbd5e1",
-    borderRadius: "9px",
-    background: "#ffffff",
-    color: "#0f172a",
-    fontSize: "14px",
-    fontWeight: 600,
-    cursor: "pointer",
-    outline: "none",
-    boxSizing: "border-box",
-  },
-
-  salespersonSaving: {
-    marginTop: "4px",
-    fontSize: "11px",
-    color: "#64748b",
-  },
 };
+
