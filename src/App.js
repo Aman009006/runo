@@ -11,6 +11,9 @@ import {
   CircleDollarSign,
   RotateCcwClock,
   Van,
+  Users,
+  Trash2,
+  Plus
 } from "lucide-react";
 import API_URL from "./config.js";
 
@@ -26,6 +29,7 @@ import Reports from "./Reports";
 import runoLogo from "./runo.PNG";
 import runoLogo2 from "./runo2.png";
 import runoLogo3 from "./runo3.png";
+import WriteOff from "./WriteOff";
 
 const STORE_ID = "40b43662-2117-11f1-0a80-1cb200302c3c";
 
@@ -91,6 +95,12 @@ function App() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isWriteOffOpen, setIsWriteOffOpen] = useState(false);
+  const [isPersonnelOpen, setIsPersonnelOpen] = useState(false);
+const [personnel, setPersonnel] = useState([]);
+const [personnelLoading, setPersonnelLoading] = useState(false);
+const [personnelName, setPersonnelName] = useState("");
+const [personnelError, setPersonnelError] = useState(null);
 
   // Состояние кассовой смены
   const [isShiftOpen, setIsShiftOpen] = useState(() => {
@@ -343,7 +353,192 @@ function App() {
       icon: Van,
       onClick: () => setIsAmanatOpen(true),
     },
+    {
+      title: "Списание",
+      description: "Списание товаров",
+      icon: RefreshCw,
+      onClick: () => setIsWriteOffOpen(true),
+    },
   ];
+
+  /*
+|--------------------------------------------------------------------------
+| ПЕРСОНАЛ
+|--------------------------------------------------------------------------
+*/
+
+const fetchPersonnel = async () => {
+  setPersonnelLoading(true);
+  setPersonnelError(null);
+
+  try {
+    const response = await fetch(
+      `${API_URL}/api/personnel`
+    );
+
+    const data =
+      await response.json();
+
+    if (
+      !response.ok ||
+      !data.success
+    ) {
+      throw new Error(
+        data.message ||
+          "Не удалось загрузить персонал"
+      );
+    }
+
+    setPersonnel(
+      Array.isArray(data.personnel)
+        ? data.personnel
+        : []
+    );
+  } catch (error) {
+    console.error(
+      "Ошибка загрузки персонала:",
+      error
+    );
+
+    setPersonnelError(
+      error.message ||
+        "Не удалось загрузить персонал"
+    );
+  } finally {
+    setPersonnelLoading(false);
+  }
+};
+
+const handleOpenPersonnel = async () => {
+  setIsPersonnelOpen(true);
+  setPersonnelName("");
+  setPersonnelError(null);
+
+  await fetchPersonnel();
+};
+
+const handleAddPersonnel = async () => {
+  const name =
+    personnelName.trim();
+
+  if (!name) {
+    setPersonnelError(
+      "Введите имя сотрудника."
+    );
+
+    return;
+  }
+
+  setPersonnelLoading(true);
+  setPersonnelError(null);
+
+  try {
+    const response = await fetch(
+      `${API_URL}/api/personnel`,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body: JSON.stringify({
+          name,
+        }),
+      }
+    );
+
+    const data =
+      await response.json();
+
+    if (
+      !response.ok ||
+      !data.success
+    ) {
+      throw new Error(
+        data.message ||
+          "Не удалось добавить сотрудника"
+      );
+    }
+
+    setPersonnel(
+      Array.isArray(data.personnel)
+        ? data.personnel
+        : []
+    );
+
+    setPersonnelName("");
+  } catch (error) {
+    console.error(
+      "Ошибка добавления сотрудника:",
+      error
+    );
+
+    setPersonnelError(
+      error.message ||
+        "Не удалось добавить сотрудника"
+    );
+  } finally {
+    setPersonnelLoading(false);
+  }
+};
+
+const handleDeletePersonnel = async (
+  person
+) => {
+  const confirmed =
+    window.confirm(
+      `Удалить сотрудника "${person.name}"?`
+    );
+
+  if (!confirmed) {
+    return;
+  }
+
+  setPersonnelLoading(true);
+  setPersonnelError(null);
+
+  try {
+    const response = await fetch(
+      `${API_URL}/api/personnel/${person.id}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    const data =
+      await response.json();
+
+    if (
+      !response.ok ||
+      !data.success
+    ) {
+      throw new Error(
+        data.message ||
+          "Не удалось удалить сотрудника"
+      );
+    }
+
+    setPersonnel(
+      Array.isArray(data.personnel)
+        ? data.personnel
+        : []
+    );
+  } catch (error) {
+    console.error(
+      "Ошибка удаления сотрудника:",
+      error
+    );
+
+    setPersonnelError(
+      error.message ||
+        "Не удалось удалить сотрудника"
+    );
+  } finally {
+    setPersonnelLoading(false);
+  }
+};
 
   if (isReservationsOpen) {
     return (
@@ -385,11 +580,32 @@ function App() {
         padding: "32px",
       }}
     >
-        <img src={runoLogo2} alt="Logo"style={{position: "absolute", bottom: "20px", left: "0px", maxWidth: "250px",zIndex: 1,
-    pointerEvents: "none",}} />
-      <img src={runoLogo2} alt="Logo"style={{position: "absolute", bottom: "20px", right: "0px", maxWidth: "250px",zIndex: 1,
-    pointerEvents: "none", transform: "scaleX(-1)"}} />
-        {/* <img src={runoLogo3} alt="Logo"style={{position: "absolute", bottom: "40vh", right: "0px", maxWidth: "350px", zIndex: 1,
+      <img
+        src={runoLogo2}
+        alt="Logo"
+        style={{
+          position: "absolute",
+          bottom: "20px",
+          left: "0px",
+          maxWidth: "250px",
+          zIndex: 1,
+          pointerEvents: "none",
+        }}
+      />
+      <img
+        src={runoLogo2}
+        alt="Logo"
+        style={{
+          position: "absolute",
+          bottom: "20px",
+          right: "0px",
+          maxWidth: "250px",
+          zIndex: 1,
+          pointerEvents: "none",
+          transform: "scaleX(-1)",
+        }}
+      />
+      {/* <img src={runoLogo3} alt="Logo"style={{position: "absolute", bottom: "40vh", right: "0px", maxWidth: "350px", zIndex: 1,
     pointerEvents: "none",}} /> */}
       <div
         style={{
@@ -414,9 +630,13 @@ function App() {
                 color: "#0f172a",
               }}
             >
-                <img src={runoLogo} alt="Logo"style={{
-                maxWidth: "200px",
-              }} />
+              <img
+                src={runoLogo}
+                alt="Logo"
+                style={{
+                  maxWidth: "200px",
+                }}
+              />
             </h1>
 
             <p
@@ -574,7 +794,427 @@ function App() {
         onRefresh={fetchMoySkladProducts}
         onClose={() => setIsCashierOpen(false)}
       />
+      <button
+  onClick={handleOpenPersonnel}
+  title="Персонал"
+  style={{
+    position: "fixed",
+    right: "24px",
+    bottom: "24px",
+    width: "54px",
+    height: "54px",
+    borderRadius: "16px",
+    border: "1px solid #e2e8f0",
+    background: "#fff",
+    color: "#2563eb",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow:
+      "0 8px 30px rgba(15,23,42,.12)",
+    zIndex: 50,
+  }}
+>
+  <Users size={24} />
+</button>
+{isPersonnelOpen && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: 100,
+      background:
+        "rgba(15,23,42,.65)",
+      backdropFilter:
+        "blur(6px)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "20px",
+    }}
+    onMouseDown={(e) => {
+      if (
+        e.target === e.currentTarget
+      ) {
+        setIsPersonnelOpen(false);
+      }
+    }}
+  >
+    <div
+      className="animate-modal"
+      style={{
+        width: "100%",
+        maxWidth: "520px",
+        maxHeight: "80vh",
+        background: "#fff",
+        borderRadius: "20px",
+        padding: "24px",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* HEADER */}
 
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent:
+            "space-between",
+          marginBottom: "20px",
+        }}
+      >
+        <div>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: "22px",
+              fontWeight: 750,
+              color: "#0f172a",
+            }}
+          >
+            Персонал
+          </h2>
+
+          <div
+            style={{
+              marginTop: "5px",
+              fontSize: "13px",
+              color: "#64748b",
+            }}
+          >
+            Управление сотрудниками
+          </div>
+        </div>
+
+        <button
+          onClick={() =>
+            setIsPersonnelOpen(false)
+          }
+          style={{
+            width: "38px",
+            height: "38px",
+            border: "none",
+            borderRadius: "10px",
+            background: "#f1f5f9",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      {/* ДОБАВЛЕНИЕ */}
+
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          marginBottom: "18px",
+        }}
+      >
+        <input
+          type="text"
+          value={personnelName}
+          onChange={(e) =>
+            setPersonnelName(
+              e.target.value
+            )
+          }
+          onKeyDown={(e) => {
+            if (
+              e.key === "Enter"
+            ) {
+              handleAddPersonnel();
+            }
+          }}
+          placeholder="Имя сотрудника"
+          disabled={personnelLoading}
+          style={{
+            flex: 1,
+            height: "46px",
+            border:
+              "1px solid #e2e8f0",
+            borderRadius: "12px",
+            padding: "0 14px",
+            outline: "none",
+            fontSize: "14px",
+            color: "#0f172a",
+          }}
+        />
+
+        <button
+          onClick={
+            handleAddPersonnel
+          }
+          disabled={
+            personnelLoading ||
+            !personnelName.trim()
+          }
+          style={{
+            height: "46px",
+            padding: "0 16px",
+            border: "none",
+            borderRadius: "12px",
+            background:
+              personnelLoading ||
+              !personnelName.trim()
+                ? "#cbd5e1"
+                : "#2563eb",
+            color: "#fff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent:
+              "center",
+            gap: "7px",
+            fontWeight: 650,
+            cursor:
+              personnelLoading ||
+              !personnelName.trim()
+                ? "not-allowed"
+                : "pointer",
+          }}
+        >
+          <Plus size={18} />
+          Добавить
+        </button>
+      </div>
+
+      {/* ОШИБКА */}
+
+      {personnelError && (
+        <div
+          style={{
+            marginBottom: "14px",
+            padding:
+              "11px 13px",
+            borderRadius: "10px",
+            background:
+              "#fef2f2",
+            border:
+              "1px solid #fecaca",
+            color: "#b91c1c",
+            fontSize: "13px",
+          }}
+        >
+          {personnelError}
+        </div>
+      )}
+
+      {/* СПИСОК */}
+
+      <div
+        style={{
+          overflowY: "auto",
+          paddingRight: "3px",
+        }}
+      >
+        {personnelLoading &&
+        personnel.length === 0 ? (
+          <div
+            style={{
+              padding: "30px",
+              textAlign: "center",
+              color: "#64748b",
+            }}
+          >
+            Загрузка...
+          </div>
+        ) : personnel.length ===
+          0 ? (
+          <div
+            style={{
+              padding: "30px",
+              textAlign: "center",
+              color: "#64748b",
+              border:
+                "1px dashed #cbd5e1",
+              borderRadius: "14px",
+            }}
+          >
+            Персонал пока не добавлен
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              flexDirection:
+                "column",
+              gap: "8px",
+            }}
+          >
+            {personnel.map(
+              (person, index) => (
+                <div
+                  key={person.id}
+                  style={{
+                    display: "flex",
+                    alignItems:
+                      "center",
+                    justifyContent:
+                      "space-between",
+                    padding:
+                      "12px 14px",
+                    border:
+                      "1px solid #e2e8f0",
+                    borderRadius:
+                      "12px",
+                    background:
+                      "#fff",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems:
+                        "center",
+                      gap: "12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius:
+                          "10px",
+                        background:
+                          "#eff6ff",
+                        color:
+                          "#2563eb",
+                        display:
+                          "flex",
+                        alignItems:
+                          "center",
+                        justifyContent:
+                          "center",
+                        fontWeight:
+                          700,
+                        fontSize:
+                          "14px",
+                      }}
+                    >
+                      {index + 1}
+                    </div>
+
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        color:
+                          "#0f172a",
+                      }}
+                    >
+                      {person.name}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() =>
+                      handleDeletePersonnel(
+                        person
+                      )
+                    }
+                    disabled={
+                      personnelLoading
+                    }
+                    title="Удалить"
+                    style={{
+                      width: "38px",
+                      height: "38px",
+                      border: "none",
+                      borderRadius:
+                        "10px",
+                      background:
+                        "#fef2f2",
+                      color:
+                        "#dc2626",
+                      display:
+                        "flex",
+                      alignItems:
+                        "center",
+                      justifyContent:
+                        "center",
+                      opacity:
+                        personnelLoading
+                          ? 0.5
+                          : 1,
+                    }}
+                  >
+                    <Trash2
+                      size={18}
+                    />
+                  </button>
+                </div>
+              )
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* FOOTER */}
+
+      <div
+        style={{
+          marginTop: "18px",
+          paddingTop: "14px",
+          borderTop:
+            "1px solid #e2e8f0",
+          display: "flex",
+          justifyContent:
+            "space-between",
+          alignItems: "center",
+        }}
+      >
+        <span
+          style={{
+            fontSize: "13px",
+            color: "#64748b",
+          }}
+        >
+          Всего сотрудников:{" "}
+          <strong
+            style={{
+              color: "#0f172a",
+            }}
+          >
+            {personnel.length}
+          </strong>
+        </span>
+
+        <button
+          onClick={() =>
+            setIsPersonnelOpen(false)
+          }
+          style={{
+            padding:
+              "10px 18px",
+            border: "none",
+            borderRadius: "10px",
+            background:
+              "#0f172a",
+            color: "#fff",
+            fontWeight: 600,
+          }}
+        >
+          Закрыть
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+      <WriteOff
+        isOpen={isWriteOffOpen}
+        products={products}
+        loading={loading}
+        error={error}
+        onRefresh={fetchMoySkladProducts}
+        onClose={() => setIsWriteOffOpen(false)}
+        onSuccess={async () => {
+          await fetchMoySkladProducts();
+          alert("Списание успешно создано!");
+        }}
+      />
       {isReturnOpen && (
         <Return
           products={products}

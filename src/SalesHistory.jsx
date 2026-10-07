@@ -106,6 +106,7 @@ function getPaymentMethods(payment = {}) {
       credit: "Аманат",
       mplus: "М+",
       delivery: "М+",
+      online_qr: "Онлайн QR",
     };
 
     const methodName = methodMap[payment.method];
@@ -239,10 +240,6 @@ function getPaymentIcon(payment = {}) {
 }
 
 function getSaleAmountForFilter(sale, filter) {
-  /*
-   * Отменённые продажи никогда не должны попадать
-   * в расчёты.
-   */
   if (sale?.cancelled) {
     return 0;
   }
@@ -384,7 +381,8 @@ export default function SalesHistory({ onBack }) {
 
   const [salesByDate, setSalesByDate] = useState({});
   const [salespersons, setSalespersons] = useState([]);
-  const [updatingSalespersonId, setUpdatingSalespersonId] = useState(null);
+  const [updatingSalespersonId, setUpdatingSalespersonId] =
+    useState(null);
 
   const [cancellingSaleId, setCancellingSaleId] = useState(null);
 
@@ -411,7 +409,10 @@ export default function SalesHistory({ onBack }) {
     }
   };
 
-  const updateSaleSalesperson = async (saleId, salespersonId) => {
+  const updateSaleSalesperson = async (
+    saleId,
+    salespersonId,
+  ) => {
     if (!saleId || !salespersonId) {
       return;
     }
@@ -476,9 +477,6 @@ export default function SalesHistory({ onBack }) {
     }
   };
 
-  /*
-   * ОТМЕНА ПРОДАЖИ
-   */
   const cancelSale = async (sale) => {
     if (!sale?.id) {
       return;
@@ -572,7 +570,8 @@ export default function SalesHistory({ onBack }) {
 
       if (!response.ok || !data.success) {
         throw new Error(
-          data.message || "Не удалось загрузить историю продаж",
+          data.message ||
+            "Не удалось загрузить историю продаж",
         );
       }
 
@@ -699,25 +698,41 @@ export default function SalesHistory({ onBack }) {
   };
 
   return (
-    <div style={styles.page}>
+    <div
+      className="sales-history-page"
+      style={styles.page}
+    >
       <div style={styles.container}>
         {/* HEADER */}
-        <div style={styles.header}>
-          <div style={styles.headerLeft}>
+        <div
+          className="sales-history-header"
+          style={styles.header}
+        >
+          <div
+            className="sales-history-header-left"
+            style={styles.headerLeft}
+          >
             <button
               type="button"
               onClick={onBack}
+              className="sales-history-back"
               style={styles.backButton}
             >
               <ArrowLeft size={20} />
             </button>
 
             <div>
-              <h1 style={styles.title}>
+              <h1
+                className="sales-history-title"
+                style={styles.title}
+              >
                 История продаж
               </h1>
 
-              <div style={styles.subtitle}>
+              <div
+                className="sales-history-subtitle"
+                style={styles.subtitle}
+              >
                 Локальная история продаж кассы
               </div>
             </div>
@@ -727,6 +742,7 @@ export default function SalesHistory({ onBack }) {
             type="button"
             onClick={fetchSales}
             disabled={loading}
+            className="sales-history-refresh"
             style={styles.refreshButton}
           >
             <RefreshCw
@@ -738,14 +754,19 @@ export default function SalesHistory({ onBack }) {
               }
             />
 
-            {loading
-              ? "Обновление..."
-              : "Обновить"}
+            <span className="sales-history-refresh-text">
+              {loading
+                ? "Обновление..."
+                : "Обновить"}
+            </span>
           </button>
         </div>
 
         {/* FILTERS */}
-        <div style={styles.filtersCard}>
+        <div
+          className="sales-history-filters"
+          style={styles.filtersCard}
+        >
           <div style={styles.filterItem}>
             <label style={styles.label}>
               <CalendarDays size={16} />
@@ -778,7 +799,10 @@ export default function SalesHistory({ onBack }) {
             />
           </div>
 
-          <div style={styles.filterItem}>
+          <div
+            className="sales-history-filter-payment"
+            style={styles.filterItem}
+          >
             <label style={styles.label}>
               <WalletCards size={16} />
               Способ оплаты
@@ -821,7 +845,10 @@ export default function SalesHistory({ onBack }) {
             </select>
           </div>
 
-          <div style={styles.filterButtons}>
+          <div
+            className="sales-history-filter-buttons"
+            style={styles.filterButtons}
+          >
             <button
               type="button"
               onClick={setToday}
@@ -848,9 +875,18 @@ export default function SalesHistory({ onBack }) {
         )}
 
         {/* SUMMARY */}
-        <div style={styles.summaryGrid}>
-          <div style={styles.summaryCard}>
-            <div style={styles.summaryIcon}>
+        <div
+          className="sales-history-summary"
+          style={styles.summaryGrid}
+        >
+          <div
+            className="sales-history-summary-card"
+            style={styles.summaryCard}
+          >
+            <div
+              className="sales-history-summary-icon"
+              style={styles.summaryIcon}
+            >
               <ShoppingCart size={22} />
             </div>
 
@@ -859,14 +895,23 @@ export default function SalesHistory({ onBack }) {
                 Продаж
               </div>
 
-              <div style={styles.summaryValue}>
+              <div
+                className="sales-history-summary-value"
+                style={styles.summaryValue}
+              >
                 {activeSalesCount}
               </div>
             </div>
           </div>
 
-          <div style={styles.summaryCard}>
-            <div style={styles.summaryIcon}>
+          <div
+            className="sales-history-summary-card"
+            style={styles.summaryCard}
+          >
+            <div
+              className="sales-history-summary-icon"
+              style={styles.summaryIcon}
+            >
               <Banknote size={22} />
             </div>
 
@@ -875,14 +920,23 @@ export default function SalesHistory({ onBack }) {
                 Сумма
               </div>
 
-              <div style={styles.summaryValue}>
+              <div
+                className="sales-history-summary-value"
+                style={styles.summaryValue}
+              >
                 {formatMoney(totalSum)} сом
               </div>
             </div>
           </div>
 
-          <div style={styles.summaryCard}>
-            <div style={styles.summaryIcon}>
+          <div
+            className="sales-history-summary-card"
+            style={styles.summaryCard}
+          >
+            <div
+              className="sales-history-summary-icon"
+              style={styles.summaryIcon}
+            >
               <WalletCards size={22} />
             </div>
 
@@ -892,6 +946,7 @@ export default function SalesHistory({ onBack }) {
               </div>
 
               <div
+                className="sales-history-summary-value sales-history-summary-filter-value"
                 style={{
                   ...styles.summaryValue,
                   fontSize: 18,
@@ -906,8 +961,14 @@ export default function SalesHistory({ onBack }) {
         </div>
 
         {/* TABLE */}
-        <div style={styles.tableCard}>
-          <div style={styles.tableHeader}>
+        <div
+          className="sales-history-table"
+          style={styles.tableCard}
+        >
+          <div
+            className="sales-history-table-header"
+            style={styles.tableHeader}
+          >
             <div style={styles.tableHeaderCell}>
               Продажа
             </div>
@@ -994,17 +1055,25 @@ export default function SalesHistory({ onBack }) {
                       sale.orderId ||
                       `${sale.createdAt}-${index}`
                     }
+                    className={`sales-history-row${
+                      isCancelled
+                        ? " cancelled"
+                        : ""
+                    }`}
                     style={{
                       ...styles.tableRow,
-
                       ...(isCancelled
                         ? styles.cancelledRow
                         : {}),
                     }}
                   >
-                    {/* SALE / PRODUCTS */}
-                    <div style={styles.saleCell}>
+                    {/* SALE */}
+                    <div
+                      className="sales-history-sale"
+                      style={styles.saleCell}
+                    >
                       <div
+                        className="sales-history-sale-icon"
                         style={{
                           ...styles.saleIcon,
                           ...(isCancelled
@@ -1033,9 +1102,9 @@ export default function SalesHistory({ onBack }) {
                               }
                             >
                               <span
+                                className="sales-history-product-name"
                                 style={{
                                   ...styles.productName,
-
                                   ...(isCancelled
                                     ? styles.cancelledText
                                     : {}),
@@ -1045,9 +1114,9 @@ export default function SalesHistory({ onBack }) {
                               </span>
 
                               <span
+                                className="sales-history-product-quantity"
                                 style={{
                                   ...styles.productQuantity,
-
                                   ...(isCancelled
                                     ? styles.cancelledText
                                     : {}),
@@ -1061,7 +1130,6 @@ export default function SalesHistory({ onBack }) {
                           <div
                             style={{
                               ...styles.productName,
-
                               ...(isCancelled
                                 ? styles.cancelledText
                                 : {}),
@@ -1074,7 +1142,6 @@ export default function SalesHistory({ onBack }) {
                         <div
                           style={{
                             ...styles.saleMeta,
-
                             ...(isCancelled
                               ? styles.cancelledMeta
                               : {}),
@@ -1104,11 +1171,14 @@ export default function SalesHistory({ onBack }) {
                     </div>
 
                     {/* PAYMENT */}
-                    <div style={styles.paymentCell}>
+                    <div
+                      className="sales-history-payment"
+                      style={styles.paymentCell}
+                    >
                       <div
+                        className="sales-history-payment-icon"
                         style={{
                           ...styles.paymentIcon,
-
                           ...(isCancelled
                             ? styles.cancelledPaymentIcon
                             : {}),
@@ -1118,6 +1188,7 @@ export default function SalesHistory({ onBack }) {
                       </div>
 
                       <div
+                        className="sales-history-payment-content"
                         style={
                           styles.paymentContent
                         }
@@ -1144,6 +1215,7 @@ export default function SalesHistory({ onBack }) {
 
                     {/* SALESPERSON */}
                     <div
+                      className="sales-history-salesperson"
                       style={
                         styles.salespersonCell
                       }
@@ -1175,7 +1247,6 @@ export default function SalesHistory({ onBack }) {
                         }
                         style={{
                           ...styles.salespersonSelect,
-
                           ...(isCancelled
                             ? styles.cancelledSelect
                             : {}),
@@ -1203,12 +1274,13 @@ export default function SalesHistory({ onBack }) {
 
                     {/* AMOUNT */}
                     <div
+                      className="sales-history-amount"
                       style={styles.amountCell}
                     >
                       <div
+                        className="amount-value"
                         style={{
                           ...styles.amount,
-
                           ...(isCancelled
                             ? styles.cancelledAmount
                             : {}),
@@ -1289,9 +1361,8 @@ export default function SalesHistory({ onBack }) {
 
                     {/* ACTION */}
                     <div
-                      style={
-                        styles.actionCell
-                      }
+                      className="sales-history-action"
+                      style={styles.actionCell}
                     >
                       {isCancelled ? (
                         <div
@@ -1326,12 +1397,19 @@ export default function SalesHistory({ onBack }) {
               })}
 
               {/* TOTAL */}
-              <div style={styles.tableFooter}>
-                <div style={styles.footerLeft}>
+              <div
+                className="sales-history-footer"
+                style={styles.tableFooter}
+              >
+                <div
+                  className="sales-history-footer-left"
+                  style={styles.footerLeft}
+                >
                   Итого
                 </div>
 
                 <div
+                  className="sales-history-footer-center"
                   style={styles.footerCenter}
                 >
                   {activeSalesCount}{" "}
@@ -1341,6 +1419,7 @@ export default function SalesHistory({ onBack }) {
                 </div>
 
                 <div
+                  className="sales-history-footer-total"
                   style={styles.footerTotal}
                 >
                   {formatMoney(totalSum)} сом
@@ -1353,7 +1432,10 @@ export default function SalesHistory({ onBack }) {
         </div>
 
         {/* INFO */}
-        <div style={styles.infoCard}>
+        <div
+          className="sales-history-info"
+          style={styles.infoCard}
+        >
           <div style={styles.infoTitle}>
             Как работает отмена продажи
           </div>
@@ -1382,6 +1464,9 @@ export default function SalesHistory({ onBack }) {
           </div>
         </div>
       </div>
+
+      {/* MOBILE RESPONSIVE */}
+      <style>{mobileStyles}</style>
     </div>
   );
 }
@@ -1395,11 +1480,13 @@ const styles = {
     color: "#0f172a",
     padding: "28px",
     boxSizing: "border-box",
+    overflowX: "hidden",
   },
 
   container: {
     maxWidth: "1500px",
     margin: "0 auto",
+    width: "100%",
   },
 
   header: {
@@ -1414,11 +1501,13 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "14px",
+    minWidth: 0,
   },
 
   backButton: {
     width: "44px",
     height: "44px",
+    minWidth: "44px",
     border: "1px solid #e2e8f0",
     borderRadius: "12px",
     background: "#ffffff",
@@ -1455,6 +1544,7 @@ const styles = {
     cursor: "pointer",
     fontSize: "14px",
     fontWeight: 600,
+    flexShrink: 0,
   },
 
   refreshIconLoading: {
@@ -1479,6 +1569,7 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     gap: "8px",
+    minWidth: 0,
   },
 
   label: {
@@ -1561,6 +1652,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "14px",
+    minWidth: 0,
   },
 
   summaryIcon: {
@@ -1585,6 +1677,7 @@ const styles = {
     fontSize: "23px",
     fontWeight: 750,
     color: "#0f172a",
+    overflowWrap: "anywhere",
   },
 
   tableCard: {
@@ -1602,10 +1695,6 @@ const styles = {
     borderBottom: "1px solid #e2e8f0",
     padding: "14px 20px",
     gap: "20px",
-  },
-
-  salespersonCell: {
-    minWidth: 0,
   },
 
   tableHeaderCell: {
@@ -1667,6 +1756,7 @@ const styles = {
     gap: "8px",
     lineHeight: 1.4,
     marginBottom: "3px",
+    minWidth: 0,
   },
 
   productName: {
@@ -1674,6 +1764,7 @@ const styles = {
     fontWeight: 650,
     color: "#0f172a",
     wordBreak: "break-word",
+    minWidth: 0,
   },
 
   productQuantity: {
@@ -1681,6 +1772,7 @@ const styles = {
     fontWeight: 700,
     color: "#475569",
     whiteSpace: "nowrap",
+    flexShrink: 0,
   },
 
   cancelledText: {
@@ -1695,6 +1787,7 @@ const styles = {
     marginTop: "7px",
     color: "#94a3b8",
     fontSize: "12px",
+    flexWrap: "wrap",
   },
 
   cancelledMeta: {
@@ -1769,26 +1862,8 @@ const styles = {
     fontSize: "12px",
   },
 
-  amountCell: {
-    textAlign: "right",
-  },
-
-  amount: {
-    fontSize: "16px",
-    fontWeight: 750,
-    color: "#0f172a",
-    whiteSpace: "nowrap",
-  },
-
-  cancelledAmount: {
-    color: "#dc2626",
-    textDecoration: "line-through",
-  },
-
-  amountHint: {
-    marginTop: "4px",
-    color: "#94a3b8",
-    fontSize: "11px",
+  salespersonCell: {
+    minWidth: 0,
   },
 
   salespersonSelect: {
@@ -1811,6 +1886,29 @@ const styles = {
     borderColor: "#fecaca",
     background: "#fff1f2",
     color: "#b91c1c",
+  },
+
+  amountCell: {
+    textAlign: "right",
+    minWidth: 0,
+  },
+
+  amount: {
+    fontSize: "16px",
+    fontWeight: 750,
+    color: "#0f172a",
+    whiteSpace: "nowrap",
+  },
+
+  cancelledAmount: {
+    color: "#dc2626",
+    textDecoration: "line-through",
+  },
+
+  amountHint: {
+    marginTop: "4px",
+    color: "#94a3b8",
+    fontSize: "11px",
   },
 
   actionCell: {
@@ -1887,6 +1985,9 @@ const styles = {
     justifyContent: "center",
     gap: "10px",
     color: "#94a3b8",
+    padding: "20px",
+    textAlign: "center",
+    boxSizing: "border-box",
   },
 
   emptyTitle: {
@@ -1924,4 +2025,308 @@ const styles = {
     lineHeight: 1.5,
   },
 };
+
+const mobileStyles = `
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .sales-history-table-header {
+      display: none !important;
+    }
+  }
+
+  @media (max-width: 768px) {
+    body {
+      overflow-x: hidden;
+    }
+
+    .sales-history-page {
+      padding: 14px !important;
+    }
+
+    .sales-history-header {
+      flex-wrap: wrap !important;
+      gap: 12px !important;
+      margin-bottom: 16px !important;
+    }
+
+    .sales-history-header-left {
+      min-width: 0 !important;
+      flex: 1 !important;
+    }
+
+    .sales-history-title {
+      font-size: 21px !important;
+    }
+
+    .sales-history-subtitle {
+      font-size: 12px !important;
+    }
+
+    .sales-history-refresh {
+      width: 44px !important;
+      padding: 0 !important;
+      justify-content: center !important;
+    }
+
+    .sales-history-refresh-text {
+      display: none !important;
+    }
+
+    .sales-history-filters {
+      grid-template-columns: 1fr 1fr !important;
+      gap: 12px !important;
+      padding: 14px !important;
+    }
+
+    .sales-history-filter-payment {
+      grid-column: 1 / -1 !important;
+    }
+
+    .sales-history-filter-buttons {
+      grid-column: 1 / -1 !important;
+      width: 100% !important;
+    }
+
+    .sales-history-filter-buttons button {
+      flex: 1 !important;
+    }
+
+    .sales-history-summary {
+      grid-template-columns: 1fr 1fr !important;
+      gap: 10px !important;
+    }
+
+    .sales-history-summary-card:last-child {
+      grid-column: 1 / -1 !important;
+    }
+
+    .sales-history-table {
+      border-radius: 14px !important;
+      background: transparent !important;
+      border: none !important;
+      overflow: visible !important;
+    }
+
+    .sales-history-row {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 0 !important;
+      padding: 14px !important;
+      margin-bottom: 10px !important;
+      border: 1px solid #e2e8f0 !important;
+      border-radius: 14px !important;
+      background: #ffffff !important;
+    }
+
+    .sales-history-row.cancelled {
+      background: #fff7f7 !important;
+      border-color: #fecaca !important;
+    }
+
+    .sales-history-sale {
+      padding-bottom: 12px !important;
+      border-bottom: 1px solid #f1f5f9 !important;
+    }
+
+    .sales-history-payment {
+      padding: 12px 0 !important;
+      border-bottom: 1px solid #f1f5f9 !important;
+    }
+
+    .sales-history-salesperson {
+      padding: 12px 0 !important;
+      border-bottom: 1px solid #f1f5f9 !important;
+    }
+
+    .sales-history-amount {
+      padding: 12px 0 !important;
+      text-align: left !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 10px !important;
+      border-bottom: 1px solid #f1f5f9 !important;
+    }
+
+    .sales-history-amount .amount-value {
+      text-align: right !important;
+    }
+
+    .sales-history-action {
+      padding-top: 12px !important;
+      width: 100% !important;
+    }
+
+    .sales-history-action button,
+    .sales-history-action > div {
+      width: 100% !important;
+      height: 42px !important;
+    }
+
+    .sales-history-salesperson select {
+      height: 42px !important;
+      min-width: 0 !important;
+      width: 100% !important;
+    }
+
+    .sales-history-payment-content {
+      flex: 1 !important;
+      min-width: 0 !important;
+    }
+
+    .sales-history-payment-content > div {
+      word-break: break-word !important;
+    }
+
+    .sales-history-footer {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 8px !important;
+      padding: 14px !important;
+      border-radius: 14px !important;
+      margin-top: 4px !important;
+    }
+
+    .sales-history-footer-left {
+      flex: 1 !important;
+    }
+
+    .sales-history-footer-center {
+      width: 100% !important;
+      order: 3 !important;
+    }
+
+    .sales-history-footer-total {
+      margin-left: auto !important;
+    }
+
+    .sales-history-info {
+      margin-top: 14px !important;
+      padding: 14px !important;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .sales-history-page {
+      padding: 10px !important;
+    }
+
+    .sales-history-header {
+      align-items: center !important;
+    }
+
+    .sales-history-header-left {
+      gap: 10px !important;
+      min-width: 0 !important;
+      flex: 1 !important;
+    }
+
+    .sales-history-back {
+      width: 40px !important;
+      height: 40px !important;
+      min-width: 40px !important;
+    }
+
+    .sales-history-title {
+      font-size: 19px !important;
+    }
+
+    .sales-history-filters {
+      grid-template-columns: 1fr !important;
+      padding: 12px !important;
+    }
+
+    .sales-history-filter-payment,
+    .sales-history-filter-buttons {
+      grid-column: auto !important;
+    }
+
+    .sales-history-filter-buttons {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+    }
+
+    .sales-history-summary {
+      grid-template-columns: 1fr 1fr !important;
+    }
+
+    .sales-history-summary-card {
+      padding: 13px !important;
+      gap: 9px !important;
+    }
+
+    .sales-history-summary-card:last-child {
+      grid-column: 1 / -1 !important;
+    }
+
+    .sales-history-summary-icon {
+      width: 38px !important;
+      height: 38px !important;
+    }
+
+    .sales-history-summary-value {
+      font-size: 19px !important;
+    }
+
+    .sales-history-summary-filter-value {
+      font-size: 16px !important;
+    }
+
+    .sales-history-row {
+      padding: 12px !important;
+    }
+
+    .sales-history-sale-icon {
+      width: 36px !important;
+      height: 36px !important;
+    }
+
+    .sales-history-product-name {
+      font-size: 13px !important;
+    }
+
+    .sales-history-product-quantity {
+      font-size: 13px !important;
+    }
+
+    .sales-history-amount .amount-value {
+      font-size: 17px !important;
+    }
+
+    .sales-history-info {
+      font-size: 12px !important;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .sales-history-summary {
+      grid-template-columns: 1fr !important;
+    }
+
+    .sales-history-summary-card:last-child {
+      grid-column: auto !important;
+    }
+
+    .sales-history-filter-buttons {
+      grid-template-columns: 1fr !important;
+    }
+
+    .sales-history-payment-icon {
+      width: 30px !important;
+      height: 30px !important;
+    }
+  }
+`;
+
+export { styles as OriginalStyles };
 

@@ -713,4 +713,374 @@
     align-items: flex-start;
     flex-direction: column;
   }
+  @media (max-width: 1000px) {
+  .transfers-content-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .transfers-product-area,
+  .transfers-cart {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .transfers-products-grid {
+    max-height: 420px;
+    overflow-y: auto;
+  }
+
+  .transfers-selected-list {
+    max-height: 420px;
+    overflow-y: auto;
+  }
+
+  .transfers-product-card {
+    min-width: 0;
+  }
+
+  .transfers-selected-item {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .transfers-page {
+    padding: 12px;
+  }
+
+  .transfers-container {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .transfers-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .transfers-header-left {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .transfers-header h1 {
+    font-size: 23px;
+    line-height: 1.2;
+  }
+
+  .transfers-header p {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .transfers-header > .transfers-refresh-button {
+    width: 100%;
+  }
+
+  .transfers-mode-tabs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    box-sizing: border-box;
+  }
+
+  .transfers-mode-tabs button {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .transfers-subtabs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .transfers-subtabs button {
+    justify-content: center;
+    min-width: 0;
+    padding: 0 8px;
+  }
+
+  .transfers-form-card {
+    padding: 15px;
+    border-radius: 14px;
+  }
+
+  .transfers-product-area,
+  .transfers-cart {
+    padding: 15px;
+    border-radius: 14px;
+  }
+
+  /*
+   * ТОВАРЫ
+   */
+  .transfers-product-area {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .transfers-product-area .transfers-section-title {
+    margin-bottom: 13px;
+  }
+
+  .transfers-product-area .transfers-section-title h3,
+  .transfers-cart .transfers-section-title h3 {
+    font-size: 16px;
+  }
+
+  .transfers-product-area .transfers-section-title p,
+  .transfers-cart .transfers-section-title p {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .transfers-product-count {
+    flex-shrink: 0;
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+
+  .transfers-search {
+    height: 42px;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+  }
+
+  /*
+   * На телефоне товары идут в одну колонку.
+   * Высота ограничена, поэтому вся страница не становится огромной.
+   */
+  .transfers-products-grid {
+    width: 100%;
+    max-height: 360px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 2px;
+    box-sizing: border-box;
+  }
+
+  .transfers-product-card {
+    width: 100%;
+    min-width: 0;
+    min-height: 70px;
+    box-sizing: border-box;
+    padding: 10px;
+    border-radius: 11px;
+    gap: 9px;
+  }
+
+  .transfers-product-icon {
+    width: 35px;
+    height: 35px;
+    border-radius: 9px;
+  }
+
+  .transfers-product-info {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .transfers-product-info strong {
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+  .transfers-product-info span,
+  .transfers-product-info small {
+    font-size: 10px;
+  }
+
+  /*
+   * ВЫБРАННЫЕ ТОВАРЫ
+   */
+  .transfers-cart {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .transfers-selected-list {
+    width: 100%;
+    max-height: 430px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-sizing: border-box;
+  }
+
+  .transfers-selected-item {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 10px;
+    border-radius: 11px;
+    gap: 8px;
+  }
+
+  .transfers-selected-info {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .transfers-selected-info strong {
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+  .transfers-selected-info span {
+    font-size: 10px;
+  }
+
+  .transfers-quantity {
+    flex-shrink: 0;
+  }
+
+  .transfers-quantity button {
+    width: 28px;
+    height: 30px;
+  }
+
+  .transfers-quantity input {
+    width: 38px;
+    height: 30px;
+  }
+
+  .transfers-delete {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+  }
+
+  .transfers-empty-cart {
+    min-height: 150px;
+    padding: 20px;
+    box-sizing: border-box;
+    font-size: 12px;
+  }
+
+  /*
+   * FOOTER
+   */
+  .transfers-footer {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    padding: 15px;
+    margin-top: 16px;
+  }
+
+  .transfers-footer > div {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .transfers-primary-button {
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
+  /*
+   * Приход от поставщика
+   */
+  .transfers-total-input {
+    width: 100%;
+  }
+
+  .transfers-payment-select {
+    width: 100%;
+  }
+
+  .transfers-payment-select select {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /*
+   * История
+   */
+  .transfers-history-toolbar {
+    flex-direction: column;
+  }
+
+  .transfers-history-toolbar .transfers-search {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .transfers-history-toolbar .transfers-refresh-button {
+    width: 100%;
+  }
+
+  .transfers-history-item {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 12px;
+  }
+
+  .transfers-history-main {
+    min-width: 0;
+  }
+
+  .transfers-history-main > div:last-child {
+    min-width: 0;
+  }
+
+  .transfers-history-main strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .transfers-confirm-button,
+  .transfers-status {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 400px) {
+  .transfers-page {
+    padding: 8px;
+  }
+
+  .transfers-product-area,
+  .transfers-cart,
+  .transfers-form-card {
+    padding: 12px;
+  }
+
+  .transfers-mode-tabs button {
+    font-size: 12px;
+  }
+
+  .transfers-subtabs button {
+    font-size: 11px;
+  }
+
+  .transfers-selected-item {
+    gap: 6px;
+  }
+
+  .transfers-quantity button {
+    width: 25px;
+  }
+
+  .transfers-quantity input {
+    width: 34px;
+  }
+
+  .transfers-delete {
+    width: 28px;
+    height: 28px;
+  }
+}
 }

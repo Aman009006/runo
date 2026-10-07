@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import API_URL from "./config.js";
 
-
 function Return({ products, loading, error, onClose, onRefresh }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [returnCart, setReturnCart] = useState([]);
@@ -23,7 +22,6 @@ function Return({ products, loading, error, onClose, onRefresh }) {
   const [returnError, setReturnError] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  // Способ возврата
   const [returnPaymentMethod, setReturnPaymentMethod] = useState("cash");
 
   const formatMoney = (value) => {
@@ -108,7 +106,6 @@ function Return({ products, loading, error, onClose, onRefresh }) {
 
   const removeFromReturn = (id) => {
     setReturnCart((prev) => prev.filter((item) => item.id !== id));
-
     setReturnError(null);
   };
 
@@ -138,34 +135,30 @@ function Return({ products, loading, error, onClose, onRefresh }) {
     setReturnError(null);
 
     try {
-      const response = await fetch(
-        `${API_URL}/api/moysklad/returns`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            items: returnCart.map((item) => ({
-              id: item.id,
-              quantity: item.qty,
-              price: Number(item.price || 0),
-            })),
-
-            total,
-
-            retailShiftSyncId: localStorage.getItem(
-              "moysklad_retail_shift_id",
-            ),
-
-            // Способ возврата
-            payment: {
-              cash: returnPaymentMethod === "cash" ? total : 0,
-              card: returnPaymentMethod === "card" ? total : 0,
-            },
-          }),
+      const response = await fetch(`${API_URL}/api/moysklad/returns`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          items: returnCart.map((item) => ({
+            id: item.id,
+            quantity: item.qty,
+            price: Number(item.price || 0),
+          })),
+
+          total,
+
+          retailShiftSyncId: localStorage.getItem(
+            "moysklad_retail_shift_id",
+          ),
+
+          payment: {
+            cash: returnPaymentMethod === "cash" ? total : 0,
+            card: returnPaymentMethod === "card" ? total : 0,
+          },
+        }),
+      });
 
       const data = await response.json();
 
@@ -201,6 +194,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
           alignItems: "center",
           justifyContent: "center",
           padding: "20px",
+          boxSizing: "border-box",
         }}
       >
         <div
@@ -212,6 +206,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
             borderRadius: "20px",
             padding: "32px",
             textAlign: "center",
+            boxSizing: "border-box",
           }}
         >
           <div
@@ -258,6 +253,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
               background: "#0f172a",
               color: "#fff",
               fontWeight: 700,
+              cursor: "pointer",
             }}
           >
             Закрыть
@@ -279,6 +275,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        boxSizing: "border-box",
       }}
     >
       <div
@@ -287,13 +284,16 @@ function Return({ products, loading, error, onClose, onRefresh }) {
           width: "100%",
           maxWidth: "1400px",
           height: "92vh",
+          maxHeight: "100%",
           background: "#fff",
           borderRadius: "24px",
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
+          boxSizing: "border-box",
         }}
       >
+        {/* HEADER */}
         <div
           style={{
             height: "72px",
@@ -303,6 +303,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
             alignItems: "center",
             justifyContent: "space-between",
             padding: "0 22px",
+            boxSizing: "border-box",
           }}
         >
           <div
@@ -310,12 +311,14 @@ function Return({ products, loading, error, onClose, onRefresh }) {
               display: "flex",
               alignItems: "center",
               gap: "12px",
+              minWidth: 0,
             }}
           >
             <div
               style={{
                 width: "42px",
                 height: "42px",
+                minWidth: "42px",
                 borderRadius: "12px",
                 background: "#fff7ed",
                 color: "#ea580c",
@@ -327,11 +330,14 @@ function Return({ products, loading, error, onClose, onRefresh }) {
               <RotateCcw size={21} />
             </div>
 
-            <div>
+            <div style={{ minWidth: 0 }}>
               <div
                 style={{
                   fontSize: "18px",
                   fontWeight: 750,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
                 }}
               >
                 Возврат товаров
@@ -353,6 +359,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
             style={{
               display: "flex",
               gap: "8px",
+              flexShrink: 0,
             }}
           >
             <button
@@ -367,6 +374,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                cursor: loading ? "not-allowed" : "pointer",
               }}
             >
               <RefreshCw size={18} />
@@ -383,6 +391,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                cursor: "pointer",
               }}
             >
               <X size={20} />
@@ -390,18 +399,23 @@ function Return({ products, loading, error, onClose, onRefresh }) {
           </div>
         </div>
 
+        {/* CONTENT */}
         <div
           style={{
             flex: 1,
             minHeight: 0,
             display: "flex",
+            overflow: "hidden",
           }}
         >
+          {/* PRODUCTS */}
           <div
             style={{
               flex: 1,
+              minWidth: 0,
               padding: "20px",
               overflowY: "auto",
+              boxSizing: "border-box",
             }}
           >
             <div
@@ -418,6 +432,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                   top: "50%",
                   transform: "translateY(-50%)",
                   color: "#94a3b8",
+                  pointerEvents: "none",
                 }}
               />
 
@@ -432,6 +447,8 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                   borderRadius: "12px",
                   padding: "0 16px 0 42px",
                   outline: "none",
+                  boxSizing: "border-box",
+                  fontSize: "14px",
                 }}
               />
             </div>
@@ -448,10 +465,11 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                   display: "flex",
                   alignItems: "center",
                   gap: "8px",
+                  fontSize: "13px",
                 }}
               >
                 <AlertCircle size={17} />
-                {error}
+                <span>{error}</span>
               </div>
             )}
 
@@ -486,6 +504,8 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                       border: "1px solid #e2e8f0",
                       borderRadius: "14px",
                       padding: "14px",
+                      minWidth: 0,
+                      boxSizing: "border-box",
                     }}
                   >
                     <div
@@ -493,6 +513,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                         fontSize: "14px",
                         fontWeight: 650,
                         minHeight: "38px",
+                        overflowWrap: "anywhere",
                       }}
                     >
                       {product.name || "Без названия"}
@@ -522,6 +543,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                         justifyContent: "center",
                         gap: "6px",
                         fontWeight: 650,
+                        cursor: "pointer",
                       }}
                     >
                       <Plus size={17} />
@@ -533,6 +555,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
             )}
           </div>
 
+          {/* RETURN CART */}
           <div
             style={{
               width: "380px",
@@ -541,6 +564,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
               background: "#f8fafc",
               display: "flex",
               flexDirection: "column",
+              minHeight: 0,
             }}
           >
             <div
@@ -551,6 +575,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                gap: "10px",
               }}
             >
               <div>
@@ -585,6 +610,8 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                     alignItems: "center",
                     gap: "5px",
                     fontSize: "12px",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   <Trash2 size={15} />
@@ -596,8 +623,10 @@ function Return({ products, loading, error, onClose, onRefresh }) {
             <div
               style={{
                 flex: 1,
+                minHeight: 0,
                 overflowY: "auto",
                 padding: "14px",
+                boxSizing: "border-box",
               }}
             >
               {returnCart.length === 0 ? (
@@ -610,6 +639,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                     flexDirection: "column",
                     gap: "10px",
                     color: "#94a3b8",
+                    textAlign: "center",
                   }}
                 >
                   <RotateCcw size={38} />
@@ -638,12 +668,14 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                       <div
                         style={{
                           flex: 1,
+                          minWidth: 0,
                         }}
                       >
                         <div
                           style={{
                             fontSize: "13px",
                             fontWeight: 650,
+                            overflowWrap: "anywhere",
                           }}
                         >
                           {item.name}
@@ -666,6 +698,8 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                           border: "none",
                           background: "transparent",
                           color: "#94a3b8",
+                          cursor: "pointer",
+                          flexShrink: 0,
                         }}
                       >
                         <Trash2 size={16} />
@@ -677,6 +711,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
+                        gap: "10px",
                         marginTop: "10px",
                       }}
                     >
@@ -698,6 +733,8 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
+                            cursor: "pointer",
+                            flexShrink: 0,
                           }}
                         >
                           <Minus size={14} />
@@ -724,13 +761,19 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
+                            cursor: "pointer",
+                            flexShrink: 0,
                           }}
                         >
                           <Plus size={14} />
                         </button>
                       </div>
 
-                      <strong>
+                      <strong
+                        style={{
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {formatMoney(Number(item.price || 0) * item.qty)}
                       </strong>
                     </div>
@@ -739,11 +782,14 @@ function Return({ products, loading, error, onClose, onRefresh }) {
               )}
             </div>
 
+            {/* BOTTOM */}
             <div
               style={{
                 background: "#fff",
                 borderTop: "1px solid #e2e8f0",
                 padding: "16px",
+                boxSizing: "border-box",
+                flexShrink: 0,
               }}
             >
               {returnError && (
@@ -758,14 +804,15 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                     fontSize: "12px",
                     display: "flex",
                     gap: "7px",
+                    alignItems: "flex-start",
                   }}
                 >
-                  <AlertCircle size={15} />
-                  {returnError}
+                  <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                  <span>{returnError}</span>
                 </div>
               )}
 
-              {/* Способ возврата */}
+              {/* PAYMENT */}
               <div
                 style={{
                   display: "grid",
@@ -801,10 +848,11 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                     gap: "7px",
                     fontWeight: 700,
                     cursor: "pointer",
+                    minWidth: 0,
                   }}
                 >
                   <Banknote size={18} />
-                  Наличными
+                  <span>Наличными</span>
                 </button>
 
                 <button
@@ -834,10 +882,11 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                     gap: "7px",
                     fontWeight: 700,
                     cursor: "pointer",
+                    minWidth: 0,
                   }}
                 >
                   <CreditCard size={18} />
-                  Картой
+                  <span>Картой</span>
                 </button>
               </div>
 
@@ -845,6 +894,8 @@ function Return({ products, loading, error, onClose, onRefresh }) {
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "10px",
                   fontSize: "20px",
                   fontWeight: 800,
                   marginBottom: "13px",
@@ -852,7 +903,13 @@ function Return({ products, loading, error, onClose, onRefresh }) {
               >
                 <span>Итого</span>
 
-                <span>{formatMoney(total)}</span>
+                <span
+                  style={{
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {formatMoney(total)}
+                </span>
               </div>
 
               <button
@@ -887,8 +944,109 @@ function Return({ products, loading, error, onClose, onRefresh }) {
           </div>
         </div>
       </div>
+
+      {/* MOBILE RESPONSIVE */}
+      <style>
+        {`
+          @media (max-width: 768px) {
+            .animate-modal {
+              width: 100% !important;
+              height: calc(100vh - 16px) !important;
+              max-height: calc(100vh - 16px) !important;
+              border-radius: 18px !important;
+            }
+
+            .animate-modal > div:first-child {
+              padding-left: 14px !important;
+              padding-right: 14px !important;
+            }
+
+            .animate-modal > div:nth-child(2) {
+              flex-direction: column !important;
+              overflow-y: auto !important;
+              overflow-x: hidden !important;
+            }
+
+            .animate-modal > div:nth-child(2) > div:first-child {
+              flex: none !important;
+              width: 100% !important;
+              min-width: 0 !important;
+              height: auto !important;
+              max-height: 52vh !important;
+              padding: 14px !important;
+              overflow-y: auto !important;
+              box-sizing: border-box !important;
+              border-bottom: 1px solid #e2e8f0 !important;
+            }
+
+            .animate-modal > div:nth-child(2) > div:first-child > div:last-child {
+              grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+
+            .animate-modal > div:nth-child(2) > div:last-child {
+              width: 100% !important;
+              min-width: 0 !important;
+              flex: 1 !important;
+              border-left: none !important;
+              min-height: 48vh !important;
+              box-sizing: border-box !important;
+            }
+          }
+
+          @media (max-width: 480px) {
+            .animate-modal {
+              height: 100vh !important;
+              max-height: 100vh !important;
+              border-radius: 0 !important;
+            }
+
+            .animate-modal > div:first-child {
+              height: 64px !important;
+              min-height: 64px !important;
+            }
+
+            .animate-modal > div:first-child > div:first-child > div:first-child {
+              width: 36px !important;
+              height: 36px !important;
+              min-width: 36px !important;
+            }
+
+            .animate-modal > div:first-child > div:first-child > div:last-child > div:first-child {
+              font-size: 16px !important;
+            }
+
+            .animate-modal > div:nth-child(2) > div:first-child {
+              max-height: 46vh !important;
+            }
+
+            .animate-modal > div:nth-child(2) > div:first-child > div:last-child {
+              grid-template-columns: 1fr 1fr !important;
+              gap: 8px !important;
+            }
+
+            .animate-modal > div:nth-child(2) > div:last-child {
+              min-height: 54vh !important;
+            }
+
+            .animate-modal > div:nth-child(2) > div:last-child > div:last-child {
+              padding: 12px !important;
+            }
+          }
+
+          @media (max-width: 360px) {
+            .animate-modal > div:nth-child(2) > div:first-child > div:last-child {
+              grid-template-columns: 1fr !important;
+            }
+
+            .animate-modal > div:nth-child(2) > div:last-child > div:last-child > div:first-of-type {
+              grid-template-columns: 1fr !important;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 }
 
 export default Return;
+
