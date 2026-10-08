@@ -802,6 +802,7 @@ function ReservationFormModal({
           : `${API_URL}/api/reservations`,
         {
           method: isEdit ? "PATCH" : "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -1685,7 +1686,7 @@ function Reservations({
 
     try {
       const response = await fetch(
-        `${API_URL}/api/reservations`,
+        `${API_URL}/api/reservations`,{credentials: "include",}
       );
 
       const data = await response.json();
@@ -1827,6 +1828,7 @@ const response = await fetch(
   `${API_URL}/api/reservations/${reservation.id}/issue`,
   {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
@@ -1870,6 +1872,7 @@ const response = await fetch(
         `${API_URL}/api/reservations/${reservation.id}/cancel`,
         {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type":
               "application/json",
@@ -1935,6 +1938,7 @@ const response = await fetch(
         `${API_URL}/api/reservations/${reservation.id}/payment`,
         {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type":
               "application/json",

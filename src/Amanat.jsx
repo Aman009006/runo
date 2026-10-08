@@ -195,7 +195,7 @@ function Amanat({ onBack }) {
 
     try {
       const response = await fetch(
-        `${API_URL}/api/moysklad/amanat?from=${fromDate}&to=${toDate}`,
+        `${API_URL}/api/moysklad/amanat?from=${fromDate}&to=${toDate}`,{credentials: "include",}
       );
 
       const data = await response.json();

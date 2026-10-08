@@ -137,6 +137,7 @@ function Return({ products, loading, error, onClose, onRefresh }) {
     try {
       const response = await fetch(`${API_URL}/api/moysklad/returns`, {
         method: "POST",
+         credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },

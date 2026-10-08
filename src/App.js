@@ -13,8 +13,9 @@ import {
   Van,
   Users,
   Trash2,
-  Plus
+  Plus,
 } from "lucide-react";
+
 import API_URL from "./config.js";
 
 import Cashier from "./Cashier";
@@ -30,8 +31,7 @@ import runoLogo from "./runo.PNG";
 import runoLogo2 from "./runo2.png";
 import runoLogo3 from "./runo3.png";
 import WriteOff from "./WriteOff";
-
-const STORE_ID = "40b43662-2117-11f1-0a80-1cb200302c3c";
+import Login from "./Login";
 
 const SHIFT_STORAGE_KEY = "moysklad_retail_shift_id";
 
@@ -92,15 +92,21 @@ function App() {
   const [isAmanatOpen, setIsAmanatOpen] = useState(false);
   const [useMockApi, setUseMockApi] = useState(false);
   const [isReservationsOpen, setIsReservationsOpen] = useState(false);
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
   const [isWriteOffOpen, setIsWriteOffOpen] = useState(false);
+
   const [isPersonnelOpen, setIsPersonnelOpen] = useState(false);
-const [personnel, setPersonnel] = useState([]);
-const [personnelLoading, setPersonnelLoading] = useState(false);
-const [personnelName, setPersonnelName] = useState("");
-const [personnelError, setPersonnelError] = useState(null);
+  const [personnel, setPersonnel] = useState([]);
+  const [personnelLoading, setPersonnelLoading] = useState(false);
+  const [personnelName, setPersonnelName] = useState("");
+  const [personnelError, setPersonnelError] = useState(null);
+
+  const [authLoading, setAuthLoading] = useState(true);
+  const [branch, setBranch] = useState(null);
 
   // Состояние кассовой смены
   const [isShiftOpen, setIsShiftOpen] = useState(() => {
@@ -113,17 +119,58 @@ const [personnelError, setPersonnelError] = useState(null);
     injectEmbeddedStyles();
   }, []);
 
-  /**
-   * Загрузка товаров
-   */
+  /*
+  |--------------------------------------------------------------------------
+  | АВТОРИЗАЦИЯ
+  |--------------------------------------------------------------------------
+  */
+
+  async function checkAuth() {
+    try {
+      const response = await fetch(`${API_URL}/api/auth/me`, {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        setBranch(null);
+        return;
+      }
+
+      const data = await response.json();
+
+      if (!data.success || !data.branch) {
+        setBranch(null);
+        return;
+      }
+
+      setBranch(data.branch);
+    } catch (error) {
+      console.error("Ошибка проверки авторизации:", error);
+
+      setBranch(null);
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  /*
+  |--------------------------------------------------------------------------
+  | ЗАГРУЗКА ТОВАРОВ
+  |--------------------------------------------------------------------------
+  */
+
   const fetchMoySkladProducts = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(
-        `${API_URL}/api/moysklad/products?storeId=${STORE_ID}`,
-      );
+      const response = await fetch(`${API_URL}/api/moysklad/products`, {
+        credentials: "include",
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -148,20 +195,19 @@ const [personnelError, setPersonnelError] = useState(null);
   };
 
   useEffect(() => {
-    fetchMoySkladProducts();
-  }, []);
+    if (!branch) {
+      return;
+    }
 
-  /**
-   * Открытие смены
-   *
-   * Backend сам:
-   * - получает POS token
-   * - получает cashier UID
-   * - создаёт retailShiftSyncId
-   * - открывает смену
-   *
-   * Frontend сохраняет только ID смены.
-   */
+    fetchMoySkladProducts();
+  }, [branch]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | ОТКРЫТИЕ СМЕНЫ
+  |--------------------------------------------------------------------------
+  */
+
   const openCashShift = async () => {
     if (shiftLoading) {
       return;
@@ -178,6 +224,7 @@ const [personnelError, setPersonnelError] = useState(null);
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: "include",
         },
       );
 
@@ -191,10 +238,8 @@ const [personnelError, setPersonnelError] = useState(null);
         throw new Error("МойСклад не вернул идентификатор смены");
       }
 
-      // Сохраняем ID смены
       localStorage.setItem(SHIFT_STORAGE_KEY, data.retailShiftSyncId);
 
-      // Меняем интерфейс
       setIsShiftOpen(true);
 
       console.log("Смена открыта:", data);
@@ -211,9 +256,12 @@ const [personnelError, setPersonnelError] = useState(null);
     }
   };
 
-  /**
-   * Закрытие смены
-   */
+  /*
+  |--------------------------------------------------------------------------
+  | ЗАКРЫТИЕ СМЕНЫ
+  |--------------------------------------------------------------------------
+  */
+
   const closeCashShift = async () => {
     if (shiftLoading) {
       return;
@@ -240,6 +288,7 @@ const [personnelError, setPersonnelError] = useState(null);
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: "include",
           body: JSON.stringify({
             retailShiftSyncId,
           }),
@@ -252,10 +301,8 @@ const [personnelError, setPersonnelError] = useState(null);
         throw new Error(data.message || "Не удалось закрыть смену");
       }
 
-      // Удаляем ID только после успешного закрытия
       localStorage.removeItem(SHIFT_STORAGE_KEY);
 
-      // Меняем интерфейс
       setIsShiftOpen(false);
 
       console.log("Смена закрыта:", data);
@@ -280,10 +327,15 @@ const [personnelError, setPersonnelError] = useState(null);
         await openCashShift();
       }
     } catch (err) {
-      // Ошибка уже записана в state
       console.error(err);
     }
   };
+
+  /*
+  |--------------------------------------------------------------------------
+  | КАССИР / ВОЗВРАТ
+  |--------------------------------------------------------------------------
+  */
 
   const handleOpenCashier = () => {
     setIsCashierOpen(true);
@@ -294,6 +346,12 @@ const [personnelError, setPersonnelError] = useState(null);
     setIsReturnOpen(true);
     fetchMoySkladProducts();
   };
+
+  /*
+  |--------------------------------------------------------------------------
+  | КАРТОЧКИ
+  |--------------------------------------------------------------------------
+  */
 
   const cards = [
     {
@@ -362,183 +420,157 @@ const [personnelError, setPersonnelError] = useState(null);
   ];
 
   /*
-|--------------------------------------------------------------------------
-| ПЕРСОНАЛ
-|--------------------------------------------------------------------------
-*/
+  |--------------------------------------------------------------------------
+  | ПЕРСОНАЛ
+  |--------------------------------------------------------------------------
+  */
 
-const fetchPersonnel = async () => {
-  setPersonnelLoading(true);
-  setPersonnelError(null);
+  const fetchPersonnel = async () => {
+    setPersonnelLoading(true);
+    setPersonnelError(null);
 
-  try {
-    const response = await fetch(
-      `${API_URL}/api/personnel`
-    );
+    try {
+      const response = await fetch(`${API_URL}/api/personnel`, {
+        credentials: "include",
+      });
 
-    const data =
-      await response.json();
+      const data = await response.json();
 
-    if (
-      !response.ok ||
-      !data.success
-    ) {
-      throw new Error(
-        data.message ||
-          "Не удалось загрузить персонал"
-      );
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Не удалось загрузить персонал");
+      }
+
+      setPersonnel(Array.isArray(data.personnel) ? data.personnel : []);
+    } catch (error) {
+      console.error("Ошибка загрузки персонала:", error);
+
+      setPersonnelError(error.message || "Не удалось загрузить персонал");
+    } finally {
+      setPersonnelLoading(false);
+    }
+  };
+
+  const handleOpenPersonnel = async () => {
+    setIsPersonnelOpen(true);
+    setPersonnelName("");
+    setPersonnelError(null);
+
+    await fetchPersonnel();
+  };
+
+  const handleAddPersonnel = async () => {
+    const name = personnelName.trim();
+
+    if (!name) {
+      setPersonnelError("Введите имя сотрудника.");
+
+      return;
     }
 
-    setPersonnel(
-      Array.isArray(data.personnel)
-        ? data.personnel
-        : []
-    );
-  } catch (error) {
-    console.error(
-      "Ошибка загрузки персонала:",
-      error
-    );
+    setPersonnelLoading(true);
+    setPersonnelError(null);
 
-    setPersonnelError(
-      error.message ||
-        "Не удалось загрузить персонал"
-    );
-  } finally {
-    setPersonnelLoading(false);
-  }
-};
-
-const handleOpenPersonnel = async () => {
-  setIsPersonnelOpen(true);
-  setPersonnelName("");
-  setPersonnelError(null);
-
-  await fetchPersonnel();
-};
-
-const handleAddPersonnel = async () => {
-  const name =
-    personnelName.trim();
-
-  if (!name) {
-    setPersonnelError(
-      "Введите имя сотрудника."
-    );
-
-    return;
-  }
-
-  setPersonnelLoading(true);
-  setPersonnelError(null);
-
-  try {
-    const response = await fetch(
-      `${API_URL}/api/personnel`,
-      {
+    try {
+      const response = await fetch(`${API_URL}/api/personnel`, {
         method: "POST",
-
         headers: {
-          "Content-Type":
-            "application/json",
+          "Content-Type": "application/json",
         },
-
+        credentials: "include",
         body: JSON.stringify({
           name,
         }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Не удалось добавить сотрудника");
       }
-    );
 
-    const data =
-      await response.json();
+      setPersonnel(Array.isArray(data.personnel) ? data.personnel : []);
 
-    if (
-      !response.ok ||
-      !data.success
-    ) {
-      throw new Error(
-        data.message ||
-          "Не удалось добавить сотрудника"
-      );
+      setPersonnelName("");
+    } catch (error) {
+      console.error("Ошибка добавления сотрудника:", error);
+
+      setPersonnelError(error.message || "Не удалось добавить сотрудника");
+    } finally {
+      setPersonnelLoading(false);
+    }
+  };
+
+  const handleDeletePersonnel = async (person) => {
+    const confirmed = window.confirm(`Удалить сотрудника "${person.name}"?`);
+
+    if (!confirmed) {
+      return;
     }
 
-    setPersonnel(
-      Array.isArray(data.personnel)
-        ? data.personnel
-        : []
-    );
+    setPersonnelLoading(true);
+    setPersonnelError(null);
 
-    setPersonnelName("");
-  } catch (error) {
-    console.error(
-      "Ошибка добавления сотрудника:",
-      error
-    );
-
-    setPersonnelError(
-      error.message ||
-        "Не удалось добавить сотрудника"
-    );
-  } finally {
-    setPersonnelLoading(false);
-  }
-};
-
-const handleDeletePersonnel = async (
-  person
-) => {
-  const confirmed =
-    window.confirm(
-      `Удалить сотрудника "${person.name}"?`
-    );
-
-  if (!confirmed) {
-    return;
-  }
-
-  setPersonnelLoading(true);
-  setPersonnelError(null);
-
-  try {
-    const response = await fetch(
-      `${API_URL}/api/personnel/${person.id}`,
-      {
+    try {
+      const response = await fetch(`${API_URL}/api/personnel/${person.id}`, {
         method: "DELETE",
+        credentials: "include",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Не удалось удалить сотрудника");
       }
-    );
 
-    const data =
-      await response.json();
+      setPersonnel(Array.isArray(data.personnel) ? data.personnel : []);
+    } catch (error) {
+      console.error("Ошибка удаления сотрудника:", error);
 
-    if (
-      !response.ok ||
-      !data.success
-    ) {
-      throw new Error(
-        data.message ||
-          "Не удалось удалить сотрудника"
-      );
+      setPersonnelError(error.message || "Не удалось удалить сотрудника");
+    } finally {
+      setPersonnelLoading(false);
     }
+  };
 
-    setPersonnel(
-      Array.isArray(data.personnel)
-        ? data.personnel
-        : []
-    );
-  } catch (error) {
-    console.error(
-      "Ошибка удаления сотрудника:",
-      error
-    );
+  /*
+  |--------------------------------------------------------------------------
+  | AUTH GUARD
+  |--------------------------------------------------------------------------
+  */
 
-    setPersonnelError(
-      error.message ||
-        "Не удалось удалить сотрудника"
+  if (authLoading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#f8fafc",
+          color: "#64748b",
+          fontSize: "16px",
+        }}
+      >
+        Проверка авторизации...
+      </div>
     );
-  } finally {
-    setPersonnelLoading(false);
   }
-};
+
+  if (!branch) {
+    return (
+      <Login
+        onLogin={(loggedBranch) => {
+          setBranch(loggedBranch);
+        }}
+      />
+    );
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | ВНУТРЕННИЕ РАЗДЕЛЫ
+  |--------------------------------------------------------------------------
+  */
 
   if (isReservationsOpen) {
     return (
@@ -551,9 +583,11 @@ const handleDeletePersonnel = async (
       />
     );
   }
+
   if (activeTab === "Отчет") {
     return <Reports onBack={() => setActiveTab(null)} />;
   }
+
   if (isAmanatOpen) {
     return <Amanat onBack={() => setIsAmanatOpen(false)} />;
   }
@@ -565,12 +599,20 @@ const handleDeletePersonnel = async (
   if (activeTab === "Расходы") {
     return <Expenses onBack={() => setActiveTab(null)} />;
   }
+
   if (activeTab === "История продаж") {
     return <SalesHistory onBack={() => setActiveTab(null)} />;
   }
+
   if (activeTab === "Инкассация") {
     return <Collection onBack={() => setActiveTab(null)} />;
   }
+
+  /*
+  |--------------------------------------------------------------------------
+  | ОСНОВНОЙ ИНТЕРФЕЙС
+  |--------------------------------------------------------------------------
+  */
 
   return (
     <div
@@ -580,6 +622,8 @@ const handleDeletePersonnel = async (
         padding: "32px",
       }}
     >
+    
+
       <img
         src={runoLogo2}
         alt="Logo"
@@ -592,6 +636,7 @@ const handleDeletePersonnel = async (
           pointerEvents: "none",
         }}
       />
+
       <img
         src={runoLogo2}
         alt="Logo"
@@ -605,8 +650,22 @@ const handleDeletePersonnel = async (
           transform: "scaleX(-1)",
         }}
       />
-      {/* <img src={runoLogo3} alt="Logo"style={{position: "absolute", bottom: "40vh", right: "0px", maxWidth: "350px", zIndex: 1,
-    pointerEvents: "none",}} /> */}
+
+      {/*
+      <img
+        src={runoLogo3}
+        alt="Logo"
+        style={{
+          position: "absolute",
+          bottom: "40vh",
+          right: "0px",
+          maxWidth: "350px",
+          zIndex: 1,
+          pointerEvents: "none",
+        }}
+      />
+      */}
+
       <div
         style={{
           maxWidth: "1400px",
@@ -651,6 +710,7 @@ const handleDeletePersonnel = async (
           </div>
 
           {/* КНОПКА СМЕНЫ */}
+
           <button
             onClick={handleShiftClick}
             disabled={shiftLoading}
@@ -684,6 +744,8 @@ const handleDeletePersonnel = async (
                 : "Открыть смену"}
           </button>
         </div>
+
+        {/* ОШИБКА */}
 
         {error && (
           <div
@@ -720,11 +782,14 @@ const handleDeletePersonnel = async (
           </div>
         )}
 
+        {/* КАРТОЧКИ */}
+
         <div
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
             gap: "20px",
+            marginBottom: "80px",
           }}
         >
           {cards.map((card) => {
@@ -786,6 +851,8 @@ const handleDeletePersonnel = async (
         </div>
       </div>
 
+      {/* КАССИР */}
+
       <Cashier
         isOpen={isCashierOpen}
         products={products}
@@ -794,415 +861,397 @@ const handleDeletePersonnel = async (
         onRefresh={fetchMoySkladProducts}
         onClose={() => setIsCashierOpen(false)}
       />
+
+      {/* КНОПКА ПЕРСОНАЛА */}
+
       <button
-  onClick={handleOpenPersonnel}
-  title="Персонал"
-  style={{
-    position: "fixed",
-    right: "24px",
-    bottom: "24px",
-    width: "54px",
-    height: "54px",
-    borderRadius: "16px",
-    border: "1px solid #e2e8f0",
-    background: "#fff",
-    color: "#2563eb",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    boxShadow:
-      "0 8px 30px rgba(15,23,42,.12)",
-    zIndex: 50,
-  }}
->
-  <Users size={24} />
-</button>
-{isPersonnelOpen && (
-  <div
-    style={{
-      position: "fixed",
-      inset: 0,
-      zIndex: 100,
-      background:
-        "rgba(15,23,42,.65)",
-      backdropFilter:
-        "blur(6px)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "20px",
-    }}
-    onMouseDown={(e) => {
-      if (
-        e.target === e.currentTarget
-      ) {
-        setIsPersonnelOpen(false);
-      }
-    }}
-  >
-    <div
-      className="animate-modal"
-      style={{
-        width: "100%",
-        maxWidth: "520px",
-        maxHeight: "80vh",
-        background: "#fff",
-        borderRadius: "20px",
-        padding: "24px",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      {/* HEADER */}
+        onClick={handleOpenPersonnel}
+        title="Персонал"
+        style={{
+          position: "fixed",
+          right: "24px",
+          bottom: "24px",
+          width: "54px",
+          height: "54px",
+          borderRadius: "16px",
+          border: "1px solid #e2e8f0",
+          background: "#fff",
+          color: "#2563eb",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 8px 30px rgba(15,23,42,.12)",
+          zIndex: 50,
+        }}
+      >
+        <Users size={24} />
+      </button>
+  {/* ФИЛИАЛ + ВЫХОД */}
 
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent:
-            "space-between",
+          gap: "12px",
           marginBottom: "20px",
+          position: "fixed",
+          left: "24px",
+          bottom: "24px",
         }}
       >
-        <div>
-          <h2
-            style={{
-              margin: 0,
-              fontSize: "22px",
-              fontWeight: 750,
-              color: "#0f172a",
-            }}
-          >
-            Персонал
-          </h2>
-
-          <div
-            style={{
-              marginTop: "5px",
-              fontSize: "13px",
-              color: "#64748b",
-            }}
-          >
-            Управление сотрудниками
-          </div>
-        </div>
-
-        <button
-          onClick={() =>
-            setIsPersonnelOpen(false)
-          }
-          style={{
-            width: "38px",
-            height: "38px",
-            border: "none",
-            borderRadius: "10px",
-            background: "#f1f5f9",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <X size={18} />
-        </button>
-      </div>
-
-      {/* ДОБАВЛЕНИЕ */}
-
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          marginBottom: "18px",
-        }}
-      >
-        <input
-          type="text"
-          value={personnelName}
-          onChange={(e) =>
-            setPersonnelName(
-              e.target.value
-            )
-          }
-          onKeyDown={(e) => {
-            if (
-              e.key === "Enter"
-            ) {
-              handleAddPersonnel();
-            }
-          }}
-          placeholder="Имя сотрудника"
-          disabled={personnelLoading}
-          style={{
-            flex: 1,
-            height: "46px",
-            border:
-              "1px solid #e2e8f0",
-            borderRadius: "12px",
-            padding: "0 14px",
-            outline: "none",
-            fontSize: "14px",
-            color: "#0f172a",
-          }}
-        />
-
-        <button
-          onClick={
-            handleAddPersonnel
-          }
-          disabled={
-            personnelLoading ||
-            !personnelName.trim()
-          }
-          style={{
-            height: "46px",
-            padding: "0 16px",
-            border: "none",
-            borderRadius: "12px",
-            background:
-              personnelLoading ||
-              !personnelName.trim()
-                ? "#cbd5e1"
-                : "#2563eb",
-            color: "#fff",
-            display: "flex",
-            alignItems: "center",
-            justifyContent:
-              "center",
-            gap: "7px",
-            fontWeight: 650,
-            cursor:
-              personnelLoading ||
-              !personnelName.trim()
-                ? "not-allowed"
-                : "pointer",
-          }}
-        >
-          <Plus size={18} />
-          Добавить
-        </button>
-      </div>
-
-      {/* ОШИБКА */}
-
-      {personnelError && (
-        <div
-          style={{
-            marginBottom: "14px",
-            padding:
-              "11px 13px",
-            borderRadius: "10px",
-            background:
-              "#fef2f2",
-            border:
-              "1px solid #fecaca",
-            color: "#b91c1c",
-            fontSize: "13px",
-          }}
-        >
-          {personnelError}
-        </div>
-      )}
-
-      {/* СПИСОК */}
-
-      <div
-        style={{
-          overflowY: "auto",
-          paddingRight: "3px",
-        }}
-      >
-        {personnelLoading &&
-        personnel.length === 0 ? (
-          <div
-            style={{
-              padding: "30px",
-              textAlign: "center",
-              color: "#64748b",
-            }}
-          >
-            Загрузка...
-          </div>
-        ) : personnel.length ===
-          0 ? (
-          <div
-            style={{
-              padding: "30px",
-              textAlign: "center",
-              color: "#64748b",
-              border:
-                "1px dashed #cbd5e1",
-              borderRadius: "14px",
-            }}
-          >
-            Персонал пока не добавлен
-          </div>
-        ) : (
-          <div
-            style={{
-              display: "flex",
-              flexDirection:
-                "column",
-              gap: "8px",
-            }}
-          >
-            {personnel.map(
-              (person, index) => (
-                <div
-                  key={person.id}
-                  style={{
-                    display: "flex",
-                    alignItems:
-                      "center",
-                    justifyContent:
-                      "space-between",
-                    padding:
-                      "12px 14px",
-                    border:
-                      "1px solid #e2e8f0",
-                    borderRadius:
-                      "12px",
-                    background:
-                      "#fff",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems:
-                        "center",
-                      gap: "12px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "36px",
-                        height: "36px",
-                        borderRadius:
-                          "10px",
-                        background:
-                          "#eff6ff",
-                        color:
-                          "#2563eb",
-                        display:
-                          "flex",
-                        alignItems:
-                          "center",
-                        justifyContent:
-                          "center",
-                        fontWeight:
-                          700,
-                        fontSize:
-                          "14px",
-                      }}
-                    >
-                      {index + 1}
-                    </div>
-
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        color:
-                          "#0f172a",
-                      }}
-                    >
-                      {person.name}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() =>
-                      handleDeletePersonnel(
-                        person
-                      )
-                    }
-                    disabled={
-                      personnelLoading
-                    }
-                    title="Удалить"
-                    style={{
-                      width: "38px",
-                      height: "38px",
-                      border: "none",
-                      borderRadius:
-                        "10px",
-                      background:
-                        "#fef2f2",
-                      color:
-                        "#dc2626",
-                      display:
-                        "flex",
-                      alignItems:
-                        "center",
-                      justifyContent:
-                        "center",
-                      opacity:
-                        personnelLoading
-                          ? 0.5
-                          : 1,
-                    }}
-                  >
-                    <Trash2
-                      size={18}
-                    />
-                  </button>
-                </div>
-              )
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* FOOTER */}
-
-      <div
-        style={{
-          marginTop: "18px",
-          paddingTop: "14px",
-          borderTop:
-            "1px solid #e2e8f0",
-          display: "flex",
-          justifyContent:
-            "space-between",
-          alignItems: "center",
-        }}
-      >
-        <span
-          style={{
-            fontSize: "13px",
-            color: "#64748b",
-          }}
-        >
-          Всего сотрудников:{" "}
-          <strong
-            style={{
-              color: "#0f172a",
-            }}
-          >
-            {personnel.length}
-          </strong>
+        <span>
+          Филиал: <strong>{branch.name}</strong>
         </span>
 
         <button
-          onClick={() =>
-            setIsPersonnelOpen(false)
-          }
+          onClick={async () => {
+            try {
+              await fetch(`${API_URL}/api/auth/logout`, {
+                method: "POST",
+                credentials: "include",
+              });
+            } catch (error) {
+              console.error("Ошибка выхода:", error);
+            } finally {
+              localStorage.removeItem(SHIFT_STORAGE_KEY);
+
+              setIsShiftOpen(false);
+              setBranch(null);
+            }
+          }}
           style={{
-            padding:
-              "10px 18px",
-            border: "none",
+            border: "1px solid #e2e8f0",
+            background: "#fff",
             borderRadius: "10px",
-            background:
-              "#0f172a",
-            color: "#fff",
+            padding: "8px 14px",
+            color: "#475569",
             fontWeight: 600,
           }}
         >
-          Закрыть
+          Выйти
         </button>
       </div>
-    </div>
-  </div>
-)}
+      {/* МОДАЛКА ПЕРСОНАЛА */}
+
+      {isPersonnelOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100,
+            background: "rgba(15,23,42,.65)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsPersonnelOpen(false);
+            }
+          }}
+        >
+          <div
+            className="animate-modal"
+            style={{
+              width: "100%",
+              maxWidth: "520px",
+              maxHeight: "80vh",
+              background: "#fff",
+              borderRadius: "20px",
+              padding: "24px",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            {/* HEADER */}
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "20px",
+              }}
+            >
+              <div>
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: "22px",
+                    fontWeight: 750,
+                    color: "#0f172a",
+                  }}
+                >
+                  Персонал
+                </h2>
+
+                <div
+                  style={{
+                    marginTop: "5px",
+                    fontSize: "13px",
+                    color: "#64748b",
+                  }}
+                >
+                  Управление сотрудниками
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsPersonnelOpen(false)}
+                style={{
+                  width: "38px",
+                  height: "38px",
+                  border: "none",
+                  borderRadius: "10px",
+                  background: "#f1f5f9",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* ДОБАВЛЕНИЕ */}
+
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                marginBottom: "18px",
+              }}
+            >
+              <input
+                type="text"
+                value={personnelName}
+                onChange={(e) => setPersonnelName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleAddPersonnel();
+                  }
+                }}
+                placeholder="Имя сотрудника"
+                disabled={personnelLoading}
+                style={{
+                  flex: 1,
+                  height: "46px",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  padding: "0 14px",
+                  outline: "none",
+                  fontSize: "14px",
+                  color: "#0f172a",
+                }}
+              />
+
+              <button
+                onClick={handleAddPersonnel}
+                disabled={personnelLoading || !personnelName.trim()}
+                style={{
+                  height: "46px",
+                  padding: "0 16px",
+                  border: "none",
+                  borderRadius: "12px",
+                  background:
+                    personnelLoading || !personnelName.trim()
+                      ? "#cbd5e1"
+                      : "#2563eb",
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "7px",
+                  fontWeight: 650,
+                  cursor:
+                    personnelLoading || !personnelName.trim()
+                      ? "not-allowed"
+                      : "pointer",
+                }}
+              >
+                <Plus size={18} />
+                Добавить
+              </button>
+            </div>
+
+            {/* ОШИБКА */}
+
+            {personnelError && (
+              <div
+                style={{
+                  marginBottom: "14px",
+                  padding: "11px 13px",
+                  borderRadius: "10px",
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  color: "#b91c1c",
+                  fontSize: "13px",
+                }}
+              >
+                {personnelError}
+              </div>
+            )}
+
+            {/* СПИСОК */}
+
+            <div
+              style={{
+                overflowY: "auto",
+                paddingRight: "3px",
+              }}
+            >
+              {personnelLoading && personnel.length === 0 ? (
+                <div
+                  style={{
+                    padding: "30px",
+                    textAlign: "center",
+                    color: "#64748b",
+                  }}
+                >
+                  Загрузка...
+                </div>
+              ) : personnel.length === 0 ? (
+                <div
+                  style={{
+                    padding: "30px",
+                    textAlign: "center",
+                    color: "#64748b",
+                    border: "1px dashed #cbd5e1",
+                    borderRadius: "14px",
+                  }}
+                >
+                  Персонал пока не добавлен
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  {personnel.map((person, index) => (
+                    <div
+                      key={person.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "12px 14px",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "12px",
+                        background: "#fff",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "10px",
+                            background: "#eff6ff",
+                            color: "#2563eb",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontWeight: 700,
+                            fontSize: "14px",
+                          }}
+                        >
+                          {index + 1}
+                        </div>
+
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            color: "#0f172a",
+                          }}
+                        >
+                          {person.name}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleDeletePersonnel(person)}
+                        disabled={personnelLoading}
+                        title="Удалить"
+                        style={{
+                          width: "38px",
+                          height: "38px",
+                          border: "none",
+                          borderRadius: "10px",
+                          background: "#fef2f2",
+                          color: "#dc2626",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          opacity: personnelLoading ? 0.5 : 1,
+                        }}
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* FOOTER */}
+
+            <div
+              style={{
+                marginTop: "18px",
+                paddingTop: "14px",
+                borderTop: "1px solid #e2e8f0",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "13px",
+                  color: "#64748b",
+                }}
+              >
+                Всего сотрудников:{" "}
+                <strong
+                  style={{
+                    color: "#0f172a",
+                  }}
+                >
+                  {personnel.length}
+                </strong>
+              </span>
+
+              <button
+                onClick={() => setIsPersonnelOpen(false)}
+                style={{
+                  padding: "10px 18px",
+                  border: "none",
+                  borderRadius: "10px",
+                  background: "#0f172a",
+                  color: "#fff",
+                  fontWeight: 600,
+                }}
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* СПИСАНИЕ */}
+
       <WriteOff
         isOpen={isWriteOffOpen}
         products={products}
@@ -1215,6 +1264,9 @@ const handleDeletePersonnel = async (
           alert("Списание успешно создано!");
         }}
       />
+
+      {/* ВОЗВРАТ */}
+
       {isReturnOpen && (
         <Return
           products={products}
@@ -1224,6 +1276,8 @@ const handleDeletePersonnel = async (
           onRefresh={fetchMoySkladProducts}
         />
       )}
+
+      {/* НАСТРОЙКИ */}
 
       {isSettingsOpen && (
         <div
@@ -1342,6 +1396,8 @@ const handleDeletePersonnel = async (
         </div>
       )}
 
+      {/* ВРЕМЕННАЯ МОДАЛКА ACTIVE TAB */}
+
       {activeTab && (
         <div
           style={{
@@ -1372,7 +1428,13 @@ const handleDeletePersonnel = async (
                 justifyContent: "space-between",
               }}
             >
-              <h2 style={{ margin: 0 }}>{activeTab}</h2>
+              <h2
+                style={{
+                  margin: 0,
+                }}
+              >
+                {activeTab}
+              </h2>
 
               <button
                 onClick={() => setActiveTab(null)}

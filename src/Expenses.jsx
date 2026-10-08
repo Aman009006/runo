@@ -115,8 +115,8 @@ function Expenses({ onBack }) {
 
     try {
       const [expensesResponse, categoriesResponse] = await Promise.all([
-        fetch(`${API_URL}/api/expenses`),
-        fetch(`${API_URL}/api/expenses/categories`),
+        fetch(`${API_URL}/api/expenses`,{  credentials: "include",}),
+        fetch(`${API_URL}/api/expenses/categories`,{  credentials: "include",}),
       ]);
 
       if (!expensesResponse.ok) {
@@ -274,6 +274,7 @@ function Expenses({ onBack }) {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           amount: normalizedAmount,
 

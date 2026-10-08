@@ -63,45 +63,48 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
       return;
     }
 
-    const fetchSalespersons = async () => {
-      setSalespersonsLoading(true);
+  const fetchSalespersons = async () => {
+  setSalespersonsLoading(true);
 
-      try {
-        const response = await fetch(
-          `${API_URL}/api/moysklad/salespersons`,
-        );
+  try {
+    const response = await fetch(
+      `${API_URL}/api/moysklad/salespersons`,
+      {
+        credentials: "include",
+      },
+    );
 
-        const data = await response.json();
+    const data = await response.json();
 
-        if (!response.ok) {
-          throw new Error(
-            data.message || "Не удалось загрузить продавцов",
-          );
-        }
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Не удалось загрузить продавцов",
+      );
+    }
 
-        const sellers = Array.isArray(data)
-          ? data
-          : Array.isArray(data.salespersons)
-            ? data.salespersons
-            : [];
+    const sellers = Array.isArray(data)
+      ? data
+      : Array.isArray(data.salespersons)
+        ? data.salespersons
+        : [];
 
-        setSalespersons(sellers);
+    setSalespersons(sellers);
 
-        if (
-          sellers.length === 1 &&
-          (sellers[0].id || sellers[0].syncId)
-        ) {
-          setSelectedSalesperson(
-            sellers[0].id || sellers[0].syncId,
-          );
-        }
-      } catch (error) {
-        console.error("Ошибка загрузки продавцов:", error);
-        setSalespersons([]);
-      } finally {
-        setSalespersonsLoading(false);
-      }
-    };
+    if (
+      sellers.length === 1 &&
+      (sellers[0].id || sellers[0].syncId)
+    ) {
+      setSelectedSalesperson(
+        sellers[0].id || sellers[0].syncId,
+      );
+    }
+  } catch (error) {
+    console.error("Ошибка загрузки продавцов:", error);
+    setSalespersons([]);
+  } finally {
+    setSalespersonsLoading(false);
+  }
+};
 
     fetchSalespersons();
   }, [isOpen]);
@@ -501,6 +504,7 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
         `${API_URL}/api/moysklad/sales`,
         {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -566,6 +570,7 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
         `${API_URL}/api/moysklad/products/refresh`,
         {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },

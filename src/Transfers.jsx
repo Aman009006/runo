@@ -21,7 +21,7 @@ import "./transfers.css";
 
 import API_URL from "./config.js";
 
-const STORE_ID = "40b43662-2117-11f1-0a80-1cb200302c3c";
+// const STORE_ID = "40b43662-2117-11f1-0a80-1cb200302c3c";
 
 function Transfers({ onBack }) {
   const [mode, setMode] = useState("outgoing");
@@ -45,20 +45,19 @@ function Transfers({ onBack }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-
+const [receivedQuantities, setReceivedQuantities] = useState({});
   const [activeSection, setActiveSection] = useState("create");
 
   const [supplierTotalAmount, setSupplierTotalAmount] = useState("");
 
-  const currentWarehouse = useMemo(() => {
-    return warehouses.find((warehouse) => warehouse.id === STORE_ID);
-  }, [warehouses]);
+  const currentWarehouse = "Ваш филиал";
+  //  const currentWarehouse = useMemo(() => {
+  //   return warehouses.find((warehouse) => warehouse.id === STORE_ID);
+  // }, [warehouses]);
 
-  const otherWarehouses = useMemo(() => {
-    return warehouses.filter((warehouse) => warehouse.id !== STORE_ID);
-  }, [warehouses]);
+const otherWarehouses = warehouses
 
-  const filteredProducts = useMemo(() => {
+const filteredProducts = useMemo(() => {
     const value = productSearch.trim().toLowerCase();
 
     if (!value) {
@@ -72,24 +71,70 @@ function Transfers({ onBack }) {
     });
   }, [products, productSearch]);
 
-  const filteredIncoming = useMemo(() => {
-    const value = search.trim().toLowerCase();
+const filteredIncoming = useMemo(() => {
+  const value = search.trim().toLowerCase();
 
-    if (!value) {
-      return incomingTransfers;
-    }
+  const todayKey = new Intl.DateTimeFormat(
+    "en-CA",
+    {
+      timeZone: "Asia/Bishkek",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    },
+  ).format(new Date());
 
-    return incomingTransfers.filter((transfer) => {
+  return incomingTransfers.filter(
+    (transfer) => {
+      const date = new Date(
+        transfer.createdAt,
+      );
+
+      if (
+        Number.isNaN(date.getTime())
+      ) {
+        return false;
+      }
+
+      const transferDay =
+        new Intl.DateTimeFormat(
+          "en-CA",
+          {
+            timeZone: "Asia/Bishkek",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          },
+        ).format(date);
+
+      // Показываем только сегодняшние отправки
+      if (transferDay !== todayKey) {
+        return false;
+      }
+
+      if (!value) {
+        return true;
+      }
+
       return [
         transfer.name,
         transfer.id,
         transfer.fromWarehouse?.name,
         transfer.toWarehouse?.name,
+
+        ...(transfer.items || []).map(
+          (item) => item.name,
+        ),
       ]
         .filter(Boolean)
-        .some((field) => String(field).toLowerCase().includes(value));
-    });
-  }, [incomingTransfers, search]);
+        .some((field) =>
+          String(field)
+            .toLowerCase()
+            .includes(value),
+        );
+    },
+  );
+}, [incomingTransfers, search]);
 
   const totalQuantity = useMemo(() => {
     return items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
@@ -98,6 +143,46 @@ function Transfers({ onBack }) {
   const formatAmount = (amount) => {
     return new Intl.NumberFormat("ru-RU").format(amount) + " сом";
   };
+  const getReceivedKey = (transferId, assortmentId) => {
+  return `${transferId}:${assortmentId}`;
+};
+
+const getReceivedValue = (transfer, item) => {
+  const key = getReceivedKey(
+    transfer.id,
+    item.assortmentId,
+  );
+
+  // Если пользователь уже менял input
+  if (
+    Object.prototype.hasOwnProperty.call(
+      receivedQuantities,
+      key,
+    )
+  ) {
+    return receivedQuantities[key];
+  }
+
+  // Если уже было принято раньше — используем сохранённое значение.
+  // Для нового перемещения по умолчанию ставим количество отправленного.
+  return item.receivedQuantity ?? item.quantity ?? 0;
+};
+
+const updateReceivedQuantity = (
+  transfer,
+  item,
+  value,
+) => {
+  const key = getReceivedKey(
+    transfer.id,
+    item.assortmentId,
+  );
+
+  setReceivedQuantities((prev) => ({
+    ...prev,
+    [key]: value,
+  }));
+};
   const loadData = async () => {
     setLoading(true);
     setError("");
@@ -110,11 +195,11 @@ function Transfers({ onBack }) {
         incomingResponse,
         localResponse,
       ] = await Promise.all([
-        fetch(`${API_URL}/api/transfers/warehouses`),
-        fetch(`${API_URL}/api/transfers/suppliers`),
-        fetch(`${API_URL}/api/moysklad/products?storeId=${STORE_ID}`),
-        fetch(`${API_URL}/api/transfers/incoming?storeId=${STORE_ID}`),
-        fetch(`${API_URL}/api/transfers`),
+        fetch(`${API_URL}/api/transfers/warehouses`,{credentials: "include",}),
+        fetch(`${API_URL}/api/transfers/suppliers`,{credentials: "include",}),
+        fetch(`${API_URL}/api/moysklad/products`, {credentials: "include",}),
+        fetch(`${API_URL}/api/transfers/incoming`, {credentials: "include",}),
+        fetch(`${API_URL}/api/transfers`, {credentials: "include",}),
       ]);
 
       const warehousesData = await warehousesResponse.json();
@@ -157,15 +242,15 @@ function Transfers({ onBack }) {
       setIncomingTransfers(incomingData.rows || []);
       setLocalTransfers(localData.rows || []);
 
-      if (!selectedWarehouse) {
-        const firstOther = (warehousesData.rows || []).find(
-          (warehouse) => warehouse.id !== STORE_ID,
-        );
+      // if (!selectedWarehouse) {
+      //   const firstOther = (warehousesData.rows || []).find(
+      //     (warehouse) => warehouse.id !== STORE_ID,
+      //   );
 
-        if (firstOther) {
-          setSelectedWarehouse(firstOther.id);
-        }
-      }
+      //   if (firstOther) {
+      //     setSelectedWarehouse(firstOther.id);
+      //   }
+      // }
     } catch (err) {
       console.error(err);
       setError(err.message || "Не удалось загрузить данные");
@@ -285,11 +370,11 @@ function Transfers({ onBack }) {
     try {
       const response = await fetch(`${API_URL}/api/transfers/outgoing`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          fromWarehouseId: STORE_ID,
           toWarehouseId: selectedWarehouse,
           items: items.map((item) => ({
             assortmentId: item.id,
@@ -352,11 +437,11 @@ function Transfers({ onBack }) {
     try {
       const response = await fetch(`${API_URL}/api/transfers/receipt`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          storeId: STORE_ID,
           supplierId: selectedSupplier,
           totalAmount,
 
@@ -397,43 +482,159 @@ function Transfers({ onBack }) {
   };
 
   const confirmIncoming = async (transfer) => {
+  setError("");
+
+  const receivedItems = [];
+  const errors = [];
+
+  for (const item of transfer.items || []) {
+    const rawValue = getReceivedValue(
+      transfer,
+      item,
+    );
+
+    const sentQuantity = Number(
+      item.quantity,
+    );
+
+    const receivedQuantity = Number(
+      String(rawValue ?? "").replace(",", "."),
+    );
+
     if (
-      !window.confirm(`Подтвердить получение перемещения "${transfer.name}"?`)
+      rawValue === "" ||
+      rawValue === null ||
+      rawValue === undefined
     ) {
-      return;
-    }
-
-    setSaving(true);
-    setError("");
-
-    try {
-      const response = await fetch(
-        `${API_URL}/api/transfers/${transfer.id}/confirm`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            receivedItems: transfer.items || [],
-          }),
-        },
+      errors.push(
+        `Укажите принятое количество для "${item.name}"`,
       );
 
-      const data = await response.json();
+      continue;
+    }
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || "Не удалось подтвердить получение");
+    if (
+      !Number.isFinite(sentQuantity) ||
+      sentQuantity < 0
+    ) {
+      errors.push(
+        `Некорректное отправленное количество для "${item.name}"`,
+      );
+
+      continue;
+    }
+
+    if (
+      !Number.isFinite(receivedQuantity) ||
+      receivedQuantity < 0
+    ) {
+      errors.push(
+        `Некорректное принятое количество для "${item.name}"`,
+      );
+
+      continue;
+    }
+
+    if (receivedQuantity > sentQuantity) {
+      errors.push(
+        `Для "${item.name}" нельзя принять ${receivedQuantity} шт. — отправлено только ${sentQuantity} шт.`,
+      );
+
+      continue;
+    }
+
+    receivedItems.push({
+      assortmentId: item.assortmentId,
+      receivedQuantity,
+    });
+  }
+
+  if (errors.length > 0) {
+    setError(errors.join("\n"));
+    return;
+  }
+
+  const totalSent = (transfer.items || []).reduce(
+    (sum, item) =>
+      sum + Number(item.quantity || 0),
+    0,
+  );
+
+  const totalReceived = receivedItems.reduce(
+    (sum, item) =>
+      sum + Number(item.receivedQuantity || 0),
+    0,
+  );
+
+  const shortage =
+    totalSent - totalReceived;
+
+  const confirmText =
+    `Перемещение: ${transfer.name || transfer.id}\n\n` +
+    `Отправлено: ${totalSent} шт.\n` +
+    `Принято: ${totalReceived} шт.\n` +
+    `Недостача: ${shortage} шт.\n\n` +
+    `Подтвердить получение?`;
+
+  if (!window.confirm(confirmText)) {
+    return;
+  }
+
+  setSaving(true);
+
+  try {
+    const response = await fetch(
+      `${API_URL}/api/transfers/${transfer.id}/confirm`,
+      {
+        method: "POST",
+credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          receivedItems,
+        }),
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.message ||
+          "Не удалось подтвердить получение",
+      );
+    }
+
+    // Удаляем временные значения input
+    setReceivedQuantities((prev) => {
+      const next = { ...prev };
+
+      for (const item of transfer.items || []) {
+        delete next[
+          getReceivedKey(
+            transfer.id,
+            item.assortmentId,
+          )
+        ];
       }
 
-      await loadData();
-    } catch (err) {
-      console.error(err);
-      setError(err.message || "Не удалось подтвердить получение");
-    } finally {
-      setSaving(false);
-    }
-  };
+      return next;
+    });
+
+    await loadData();
+  } catch (err) {
+    console.error(err);
+
+    setError(
+      err.message ||
+        "Не удалось подтвердить получение",
+    );
+  } finally {
+    setSaving(false);
+  }
+};
 
   const renderProductSelector = () => {
     return (
@@ -686,104 +887,295 @@ function Transfers({ onBack }) {
     );
   };
 
-  const renderBranchReceipt = () => {
-    return (
-      <>
-        <div className="transfers-info-card">
-          <div className="transfers-info-icon">
-            <Truck size={20} />
-          </div>
-
-          <div>
-            <strong>Приход от другого филиала</strong>
-
-            <span>
-              Здесь отображаются перемещения, которые были отправлены на ваш
-              склад.
-            </span>
-          </div>
+const renderBranchReceipt = () => {
+  return (
+    <>
+      <div className="transfers-info-card">
+        <div className="transfers-info-icon">
+          <Truck size={20} />
         </div>
 
-        <div className="transfers-history-toolbar">
-          <div className="transfers-search">
-            <Search size={18} />
+        <div>
+          <strong>
+            Приход от другого филиала
+          </strong>
 
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск перемещения..."
-            />
-          </div>
+          <span>
+            Здесь отображаются перемещения,
+            которые были отправлены на ваш
+            склад сегодня. Укажите фактически
+            принятое количество по каждому товару.
+          </span>
+        </div>
+      </div>
 
-          <button
-            className="transfers-refresh-button"
-            type="button"
-            onClick={loadData}
-            disabled={loading}
-          >
-            <RefreshCw size={17} className={loading ? "spin" : ""} />
-            Обновить
-          </button>
+      <div className="transfers-history-toolbar">
+        <div className="transfers-search">
+          <Search size={18} />
+
+          <input
+            value={search}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
+            placeholder="Поиск перемещения или товара..."
+          />
         </div>
 
-        <div className="transfers-history">
-          {filteredIncoming.map((transfer) => {
-            const alreadyConfirmed = localTransfers.some(
-              (local) =>
-                local.moyskladId === transfer.id && local.status === "received",
+        <button
+          className="transfers-refresh-button"
+          type="button"
+          onClick={loadData}
+          disabled={loading || saving}
+        >
+          <RefreshCw
+            size={17}
+            className={
+              loading ? "spin" : ""
+            }
+          />
+
+          Обновить
+        </button>
+      </div>
+
+      <div className="transfers-history">
+        {filteredIncoming.map(
+          (transfer) => {
+            const totalSent =
+              (transfer.items || []).reduce(
+                (sum, item) =>
+                  sum +
+                  Number(
+                    item.quantity || 0,
+                  ),
+                0,
+              );
+
+            const totalReceived =
+              (transfer.items || []).reduce(
+                (sum, item) => {
+                  const value =
+                    Number(
+                      String(
+                        getReceivedValue(
+                          transfer,
+                          item,
+                        ) ?? "",
+                      ).replace(",", "."),
+                    );
+
+                  return (
+                    sum +
+                    (Number.isFinite(
+                      value,
+                    )
+                      ? value
+                      : 0)
+                  );
+                },
+                0,
+              );
+
+            const shortage = Math.max(
+              0,
+              totalSent -
+                totalReceived,
             );
 
             return (
-              <div className="transfers-history-item" key={transfer.id}>
+              <div
+                className="transfers-history-item transfers-incoming-card"
+                key={transfer.id}
+              >
                 <div className="transfers-history-main">
                   <div className="transfers-history-icon">
-                    <ArrowDownToLine size={20} />
+                    <ArrowDownToLine
+                      size={20}
+                    />
                   </div>
 
                   <div>
                     <strong>
-                      {transfer.name || `Перемещение ${transfer.id}`}
+                      {transfer.name ||
+                        `Перемещение ${transfer.id}`}
                     </strong>
 
                     <span>
-                      {transfer.fromWarehouse?.name || "Неизвестный склад"}
+                      {transfer.fromWarehouse
+                        ?.name ||
+                        "Неизвестный склад"}
+
                       {" → "}
-                      {transfer.toWarehouse?.name || currentWarehouse?.name}
+
+                      {transfer.toWarehouse
+                        ?.name ||
+                        "Ваш склад"}
                     </span>
 
-                    <small>{transfer.items?.length || 0} позиций</small>
+                    <small>
+                      {transfer.items
+                        ?.length || 0}{" "}
+                      позиций · Отправлено:{" "}
+                      {totalSent} шт.
+                    </small>
                   </div>
                 </div>
 
-                {alreadyConfirmed ? (
-                  <div className="transfers-status received">
-                    <Check size={16} />
-                    Получено
+                <div className="transfers-received-table">
+                  <div className="transfers-received-table-header">
+                    <span>
+                      Товар
+                    </span>
+
+                    <span>
+                      Отправлено
+                    </span>
+
+                    <span>
+                      Принято
+                    </span>
                   </div>
-                ) : (
+
+                  {(transfer.items ||
+                    []).map(
+                    (item) => {
+                      const sentQuantity =
+                        Number(
+                          item.quantity ||
+                            0,
+                        );
+
+                      const receivedValue =
+                        getReceivedValue(
+                          transfer,
+                          item,
+                        );
+
+                      return (
+                        <div
+                          className="transfers-received-table-row"
+                          key={`${transfer.id}-${item.assortmentId}`}
+                        >
+                          <div className="transfers-received-product">
+                            <strong>
+                              {item.name}
+                            </strong>
+                          </div>
+
+                          <div className="transfers-received-sent">
+                            {sentQuantity}{" "}
+                            шт.
+                          </div>
+
+                          <div className="transfers-received-input-wrap">
+                            <input
+                              className="transfers-received-input"
+                              type="number"
+                              min="0"
+                              max={
+                                sentQuantity
+                              }
+                              step="1"
+                              value={
+                                receivedValue
+                              }
+                              onChange={(
+                                e,
+                              ) =>
+                                updateReceivedQuantity(
+                                  transfer,
+                                  item,
+                                  e.target
+                                    .value,
+                                )
+                              }
+                              disabled={
+                                saving
+                              }
+                            />
+
+                            <span>
+                              шт.
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    },
+                  )}
+                </div>
+
+                <div className="transfers-received-footer">
+                  <div className="transfers-received-summary">
+                    <span>
+                      Отправлено:{" "}
+                      {totalSent} шт.
+                    </span>
+
+                    <span>
+                      Принято:{" "}
+                      {totalReceived} шт.
+                    </span>
+
+                    <span>
+                      Недостача:{" "}
+                      {shortage} шт.
+                    </span>
+                  </div>
+
                   <button
                     className="transfers-confirm-button"
                     type="button"
-                    disabled={saving}
-                    onClick={() => confirmIncoming(transfer)}
+                    disabled={
+                      saving ||
+                      !(
+                        transfer.items ||
+                        []
+                      ).length
+                    }
+                    onClick={() =>
+                      confirmIncoming(
+                        transfer,
+                      )
+                    }
                   >
-                    <Check size={17} />
-                    Подтвердить
+                    {saving ? (
+                      <>
+                        <Loader2
+                          size={17}
+                          className="spin"
+                        />
+
+                        Сохранение...
+                      </>
+                    ) : (
+                      <>
+                        <Check
+                          size={17}
+                        />
+
+                        Принять перемещение
+                      </>
+                    )}
                   </button>
-                )}
+                </div>
               </div>
             );
-          })}
+          },
+        )}
 
-          {!loading && filteredIncoming.length === 0 && (
+        {!loading &&
+          filteredIncoming.length ===
+            0 && (
             <div className="transfers-empty-history">
-              Входящих перемещений нет
+              Сегодня входящих перемещений
+              нет
             </div>
           )}
-        </div>
-      </>
-    );
-  };
+      </div>
+    </>
+  );
+};
 
   const renderSupplierReceipt = () => {
     return (

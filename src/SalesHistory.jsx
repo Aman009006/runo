@@ -393,6 +393,9 @@ export default function SalesHistory({ onBack }) {
     try {
       const response = await fetch(
         `${API_URL}/api/moysklad/salespersons`,
+        {
+        credentials: "include",
+      },
       );
 
       const data = await response.json();
@@ -430,6 +433,8 @@ export default function SalesHistory({ onBack }) {
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: "include",
+
           body: JSON.stringify({
             salespersonId,
           }),
@@ -506,6 +511,8 @@ export default function SalesHistory({ onBack }) {
         )}/cancel`,
         {
           method: "PATCH",
+          credentials: "include",
+
           headers: {
             "Content-Type": "application/json",
           },
@@ -563,7 +570,9 @@ export default function SalesHistory({ onBack }) {
 
     try {
       const response = await fetch(
-        `${API_URL}/api/moysklad/sales`,
+        `${API_URL}/api/moysklad/sales`,{
+          credentials: "include",
+        }
       );
 
       const data = await response.json();

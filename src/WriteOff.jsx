@@ -302,11 +302,11 @@ export default function WriteOff({
         `${API_URL}/api/moysklad/writeoffs`,
         {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            storeId: STORE_ID,
             reason: reason.trim(),
             items: validItems,
           }),

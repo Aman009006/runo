@@ -48,7 +48,7 @@ function Collection({ onBack }) {
       setLoading(true);
       setError("");
 
-      const response = await fetch(`${API_URL}/api/moysklad/cash/balance`);
+      const response = await fetch(`${API_URL}/api/moysklad/cash/balance`,{credentials: "include",});
 
       const data = await response.json();
 
@@ -77,7 +77,7 @@ function Collection({ onBack }) {
       setActionLoading(true);
       setError("");
 
-      const response = await fetch(`${API_URL}/api/moysklad/cash/transactions`);
+      const response = await fetch(`${API_URL}/api/moysklad/cash/transactions`,{credentials: "include",});
 
       const data = await response.json();
 
@@ -166,6 +166,7 @@ function Collection({ onBack }) {
 
       const response = await fetch(endpoint, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },

@@ -308,7 +308,7 @@ export default function Reports({ onBack }) {
       }
 
       const response = await fetch(
-        `${API_URL}/api/reports?${params.toString()}`,
+        `${API_URL}/api/reports?${params.toString()}`,{credentials: "include",}
       );
 
       if (!response.ok) {
@@ -533,6 +533,7 @@ export default function Reports({ onBack }) {
 
       const response = await fetch(`${API_URL}/api/reports/send-telegram`, {
         method: "POST",
+        credentials: "include",
         body: formData,
       });
 
@@ -579,6 +580,7 @@ export default function Reports({ onBack }) {
 
       const response = await fetch(`${API_URL}/api/reports/clear`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       const data = await response.json();
