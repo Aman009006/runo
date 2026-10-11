@@ -1,3 +1,3 @@
-const API_URL = "https://runo.kg"; // Replace with your actual API URL
+const API_URL = "https://runo.kg";
 
 export default API_URL;

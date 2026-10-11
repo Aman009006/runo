@@ -1408,7 +1408,7 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
                         <option key={person.id} value={person.id}>
                           {person.name} —{" "}
                           {Number(person.amount || 0).toLocaleString("ru-RU")}{" "}
-                          сом
+                          сом - {person.comment}
                         </option>
                       ))}
                     </select>
@@ -1514,7 +1514,7 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
                           <option key={person.id} value={person.id}>
                             {person.name} —{" "}
                             {Number(person.amount || 0).toLocaleString("ru-RU")}{" "}
-                            сом
+                            сом - {person.comment}
                           </option>
                         ))}
                       </select>
