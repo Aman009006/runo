@@ -308,7 +308,8 @@ export default function Reports({ onBack }) {
       }
 
       const response = await fetch(
-        `${API_URL}/api/reports?${params.toString()}`,{credentials: "include",}
+        `${API_URL}/api/reports?${params.toString()}`,
+        { credentials: "include" },
       );
 
       if (!response.ok) {
@@ -398,6 +399,11 @@ export default function Reports({ onBack }) {
         key: "local",
         name: "Локальная оплата",
         value: Number(payments.local) || 0,
+      },
+      {
+        key: "cashbox",
+        name: "Касса (бюджет)",
+        value: Number(payments.cashbox) || 0,
       },
     ];
 

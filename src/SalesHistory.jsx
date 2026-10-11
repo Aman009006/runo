@@ -45,81 +45,54 @@ function formatMoney(value) {
 
 function getPaymentAmounts(payment = {}) {
   return {
-    cash: Number(payment.cashSom || 0),
-    card: Number(payment.cardSom || 0),
-    amanat: Number(payment.amanatSom || 0),
-    mplus: Number(payment.mplusSom || 0),
-    online_qr: Number(payment.online_qrSom || 0),
+    cash: Number(payment.cashSom ?? Number(payment.cash || 0) / 100),
+    card: Number(payment.cardSom ?? Number(payment.card || 0) / 100),
+    amanat: Number(payment.amanatSom ?? Number(payment.amanat || 0) / 100),
+    mplus: Number(payment.mplusSom ?? Number(payment.mplus || 0) / 100),
+    online_qr: Number(
+      payment.online_qrSom ?? Number(payment.online_qr || 0) / 100,
+    ),
+    cashbox: Number(payment.cashboxSom ?? Number(payment.cashbox || 0) / 100),
   };
 }
 
 function getPaymentMethods(payment = {}) {
   const amounts = getPaymentAmounts(payment);
 
-  const methods = [];
+  const methodConfig = [
+    { key: "cash", name: "Наличные" },
+    { key: "card", name: "Карта" },
+    { key: "amanat", name: "Аманат" },
+    { key: "mplus", name: "М+" },
+    { key: "online_qr", name: "Онлайн QR" },
+    { key: "cashbox", name: "Касса (бюджет)" },
+  ];
 
-  if (amounts.cash > 0) {
-    methods.push({
-      key: "cash",
-      name: "Наличные",
-      amount: amounts.cash,
-    });
-  }
-
-  if (amounts.card > 0) {
-    methods.push({
-      key: "card",
-      name: "Карта",
-      amount: amounts.card,
-    });
-  }
-
-  if (amounts.amanat > 0) {
-    methods.push({
-      key: "amanat",
-      name: "Аманат",
-      amount: amounts.amanat,
-    });
-  }
-
-  if (amounts.mplus > 0) {
-    methods.push({
-      key: "mplus",
-      name: "М+",
-      amount: amounts.mplus,
-    });
-  }
-
-  if (amounts.online_qr > 0) {
-    methods.push({
-      key: "online_qr",
-      name: "Онлайн QR",
-      amount: amounts.online_qr,
-    });
-  }
+  const methods = methodConfig
+    .filter(({ key }) => amounts[key] > 0)
+    .map(({ key, name }) => ({
+      key,
+      name,
+      amount: amounts[key],
+    }));
 
   if (methods.length === 0 && payment.method) {
     const methodMap = {
-      cash: "Наличные",
-      card: "Карта",
-      amanat: "Аманат",
-      credit: "Аманат",
-      mplus: "М+",
-      delivery: "М+",
-      online_qr: "Онлайн QR",
+      cash: { key: "cash", name: "Наличные" },
+      card: { key: "card", name: "Карта" },
+      amanat: { key: "amanat", name: "Аманат" },
+      credit: { key: "amanat", name: "Аманат" },
+      mplus: { key: "mplus", name: "М+" },
+      delivery: { key: "mplus", name: "М+" },
+      online_qr: { key: "online_qr", name: "Онлайн QR" },
+      cashbox: { key: "cashbox", name: "Касса (бюджет)" },
     };
 
-    const methodName = methodMap[payment.method];
+    const method = methodMap[payment.method];
 
-    if (methodName) {
+    if (method) {
       methods.push({
-        key:
-          payment.method === "credit"
-            ? "amanat"
-            : payment.method === "delivery"
-              ? "mplus"
-              : payment.method,
-        name: methodName,
+        ...method,
         amount: 0,
       });
     }
@@ -184,9 +157,7 @@ function getPaymentName(payment = {}) {
         <div style={styles.paymentBreakdown}>
           {methods.map((method, index) => (
             <React.Fragment key={method.key}>
-              {index > 0 && (
-                <span style={styles.paymentPlus}>{" + "}</span>
-              )}
+              {index > 0 && <span style={styles.paymentPlus}>{" + "}</span>}
 
               <span>
                 {method.name} {formatMoney(method.amount)} сом
@@ -281,6 +252,9 @@ function getSaleAmountForFilter(sale, filter) {
   if (filter === "online_qr") {
     return amounts.online_qr;
   }
+  if (filter === "cashbox") {
+    return amounts.cashbox;
+  }
 
   return 0;
 }
@@ -343,6 +317,7 @@ function getPaymentFilterName(filter) {
     mplus: "М+",
     online_qr: "Онлайн QR",
     mixed: "Смешанная",
+    cashbox: "Касса (бюджет)",
   };
 
   return names[filter] || "Все способы";
@@ -381,8 +356,7 @@ export default function SalesHistory({ onBack }) {
 
   const [salesByDate, setSalesByDate] = useState({});
   const [salespersons, setSalespersons] = useState([]);
-  const [updatingSalespersonId, setUpdatingSalespersonId] =
-    useState(null);
+  const [updatingSalespersonId, setUpdatingSalespersonId] = useState(null);
 
   const [cancellingSaleId, setCancellingSaleId] = useState(null);
 
@@ -391,19 +365,14 @@ export default function SalesHistory({ onBack }) {
 
   const fetchSalespersons = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/api/moysklad/salespersons`,
-        {
+      const response = await fetch(`${API_URL}/api/moysklad/salespersons`, {
         credentials: "include",
-      },
-      );
+      });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.message || "Не удалось загрузить продавцов",
-        );
+        throw new Error(data.message || "Не удалось загрузить продавцов");
       }
 
       setSalespersons(data.salespersons || []);
@@ -412,10 +381,7 @@ export default function SalesHistory({ onBack }) {
     }
   };
 
-  const updateSaleSalesperson = async (
-    saleId,
-    salespersonId,
-  ) => {
+  const updateSaleSalesperson = async (saleId, salespersonId) => {
     if (!saleId || !salespersonId) {
       return;
     }
@@ -444,9 +410,7 @@ export default function SalesHistory({ onBack }) {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(
-          data.message || "Не удалось изменить продавца",
-        );
+        throw new Error(data.message || "Не удалось изменить продавца");
       }
 
       setSalesByDate((prev) => {
@@ -474,9 +438,7 @@ export default function SalesHistory({ onBack }) {
     } catch (err) {
       console.error("Ошибка изменения продавца:", err);
 
-      setError(
-        err.message || "Не удалось изменить продавца",
-      );
+      setError(err.message || "Не удалось изменить продавца");
     } finally {
       setUpdatingSalespersonId(null);
     }
@@ -506,9 +468,7 @@ export default function SalesHistory({ onBack }) {
 
     try {
       const response = await fetch(
-        `${API_URL}/api/moysklad/sales/${encodeURIComponent(
-          sale.id,
-        )}/cancel`,
+        `${API_URL}/api/moysklad/sales/${encodeURIComponent(sale.id)}/cancel`,
         {
           method: "PATCH",
           credentials: "include",
@@ -522,9 +482,7 @@ export default function SalesHistory({ onBack }) {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(
-          data.message || "Не удалось отменить продажу",
-        );
+        throw new Error(data.message || "Не удалось отменить продажу");
       }
 
       setSalesByDate((prev) => {
@@ -544,9 +502,7 @@ export default function SalesHistory({ onBack }) {
               ...currentSale,
               ...(data.sale || {}),
               cancelled: true,
-              cancelledAt:
-                data.sale?.cancelledAt ||
-                new Date().toISOString(),
+              cancelledAt: data.sale?.cancelledAt || new Date().toISOString(),
             };
           });
         });
@@ -556,9 +512,7 @@ export default function SalesHistory({ onBack }) {
     } catch (err) {
       console.error("Ошибка отмены продажи:", err);
 
-      setError(
-        err.message || "Не удалось отменить продажу",
-      );
+      setError(err.message || "Не удалось отменить продажу");
     } finally {
       setCancellingSaleId(null);
     }
@@ -569,32 +523,21 @@ export default function SalesHistory({ onBack }) {
     setError(null);
 
     try {
-      const response = await fetch(
-        `${API_URL}/api/moysklad/sales`,{
-          credentials: "include",
-        }
-      );
+      const response = await fetch(`${API_URL}/api/moysklad/sales`, {
+        credentials: "include",
+      });
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(
-          data.message ||
-            "Не удалось загрузить историю продаж",
-        );
+        throw new Error(data.message || "Не удалось загрузить историю продаж");
       }
 
       setSalesByDate(data.byDate || {});
     } catch (err) {
-      console.error(
-        "Ошибка загрузки истории продаж:",
-        err,
-      );
+      console.error("Ошибка загрузки истории продаж:", err);
 
-      setError(
-        err.message ||
-          "Не удалось загрузить историю продаж",
-      );
+      setError(err.message || "Не удалось загрузить историю продаж");
 
       setSalesByDate({});
     } finally {
@@ -638,10 +581,7 @@ export default function SalesHistory({ onBack }) {
           return;
         }
 
-        const filteredAmount = getSaleAmountForFilter(
-          sale,
-          paymentFilter,
-        );
+        const filteredAmount = getSaleAmountForFilter(sale, paymentFilter);
 
         result.push({
           ...sale,
@@ -652,37 +592,25 @@ export default function SalesHistory({ onBack }) {
     });
 
     result.sort((a, b) => {
-      const dateA = new Date(
-        a.createdAt || 0,
-      ).getTime();
+      const dateA = new Date(a.createdAt || 0).getTime();
 
-      const dateB = new Date(
-        b.createdAt || 0,
-      ).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
 
       return dateB - dateA;
     });
 
     return result;
-  }, [
-    salesByDate,
-    dateFrom,
-    dateTo,
-    paymentFilter,
-  ]);
+  }, [salesByDate, dateFrom, dateTo, paymentFilter]);
 
   const totalSum = useMemo(() => {
     return filteredSales.reduce(
-      (sum, sale) =>
-        sum + Number(sale.filteredAmount || 0),
+      (sum, sale) => sum + Number(sale.filteredAmount || 0),
       0,
     );
   }, [filteredSales]);
 
   const activeSalesCount = useMemo(() => {
-    return filteredSales.filter(
-      (sale) => !sale.cancelled,
-    ).length;
+    return filteredSales.filter((sale) => !sale.cancelled).length;
   }, [filteredSales]);
 
   const setToday = () => {
@@ -707,20 +635,11 @@ export default function SalesHistory({ onBack }) {
   };
 
   return (
-    <div
-      className="sales-history-page"
-      style={styles.page}
-    >
+    <div className="sales-history-page" style={styles.page}>
       <div style={styles.container}>
         {/* HEADER */}
-        <div
-          className="sales-history-header"
-          style={styles.header}
-        >
-          <div
-            className="sales-history-header-left"
-            style={styles.headerLeft}
-          >
+        <div className="sales-history-header" style={styles.header}>
+          <div className="sales-history-header-left" style={styles.headerLeft}>
             <button
               type="button"
               onClick={onBack}
@@ -731,17 +650,11 @@ export default function SalesHistory({ onBack }) {
             </button>
 
             <div>
-              <h1
-                className="sales-history-title"
-                style={styles.title}
-              >
+              <h1 className="sales-history-title" style={styles.title}>
                 История продаж
               </h1>
 
-              <div
-                className="sales-history-subtitle"
-                style={styles.subtitle}
-              >
+              <div className="sales-history-subtitle" style={styles.subtitle}>
                 Локальная история продаж кассы
               </div>
             </div>
@@ -756,26 +669,17 @@ export default function SalesHistory({ onBack }) {
           >
             <RefreshCw
               size={18}
-              style={
-                loading
-                  ? styles.refreshIconLoading
-                  : undefined
-              }
+              style={loading ? styles.refreshIconLoading : undefined}
             />
 
             <span className="sales-history-refresh-text">
-              {loading
-                ? "Обновление..."
-                : "Обновить"}
+              {loading ? "Обновление..." : "Обновить"}
             </span>
           </button>
         </div>
 
         {/* FILTERS */}
-        <div
-          className="sales-history-filters"
-          style={styles.filtersCard}
-        >
+        <div className="sales-history-filters" style={styles.filtersCard}>
           <div style={styles.filterItem}>
             <label style={styles.label}>
               <CalendarDays size={16} />
@@ -785,9 +689,7 @@ export default function SalesHistory({ onBack }) {
             <input
               type="date"
               value={dateFrom}
-              onChange={(e) =>
-                setDateFrom(e.target.value)
-              }
+              onChange={(e) => setDateFrom(e.target.value)}
               style={styles.dateInput}
             />
           </div>
@@ -801,9 +703,7 @@ export default function SalesHistory({ onBack }) {
             <input
               type="date"
               value={dateTo}
-              onChange={(e) =>
-                setDateTo(e.target.value)
-              }
+              onChange={(e) => setDateTo(e.target.value)}
               style={styles.dateInput}
             />
           </div>
@@ -819,38 +719,24 @@ export default function SalesHistory({ onBack }) {
 
             <select
               value={paymentFilter}
-              onChange={(e) =>
-                setPaymentFilter(e.target.value)
-              }
+              onChange={(e) => setPaymentFilter(e.target.value)}
               style={styles.select}
             >
-              <option value="all">
-                Все способы
-              </option>
+              <option value="all">Все способы</option>
 
-              <option value="cash">
-                Наличные
-              </option>
+              <option value="cash">Наличные</option>
 
-              <option value="card">
-                Карта
-              </option>
+              <option value="card">Карта</option>
 
-              <option value="amanat">
-                Аманат
-              </option>
+              <option value="amanat">Аманат</option>
 
-              <option value="mplus">
-                М+
-              </option>
+              <option value="mplus">М+</option>
 
-              <option value="online_qr">
-                Онлайн QR
-              </option>
+              <option value="online_qr">Онлайн QR</option>
 
-              <option value="mixed">
-                Смешанная
-              </option>
+              <option value="cashbox">Касса (бюджет)</option>
+
+              <option value="mixed">Смешанная</option>
             </select>
           </div>
 
@@ -884,10 +770,7 @@ export default function SalesHistory({ onBack }) {
         )}
 
         {/* SUMMARY */}
-        <div
-          className="sales-history-summary"
-          style={styles.summaryGrid}
-        >
+        <div className="sales-history-summary" style={styles.summaryGrid}>
           <div
             className="sales-history-summary-card"
             style={styles.summaryCard}
@@ -900,9 +783,7 @@ export default function SalesHistory({ onBack }) {
             </div>
 
             <div>
-              <div style={styles.summaryLabel}>
-                Продаж
-              </div>
+              <div style={styles.summaryLabel}>Продаж</div>
 
               <div
                 className="sales-history-summary-value"
@@ -925,9 +806,7 @@ export default function SalesHistory({ onBack }) {
             </div>
 
             <div>
-              <div style={styles.summaryLabel}>
-                Сумма
-              </div>
+              <div style={styles.summaryLabel}>Сумма</div>
 
               <div
                 className="sales-history-summary-value"
@@ -950,9 +829,7 @@ export default function SalesHistory({ onBack }) {
             </div>
 
             <div>
-              <div style={styles.summaryLabel}>
-                Фильтр
-              </div>
+              <div style={styles.summaryLabel}>Фильтр</div>
 
               <div
                 className="sales-history-summary-value sales-history-summary-filter-value"
@@ -961,34 +838,23 @@ export default function SalesHistory({ onBack }) {
                   fontSize: 18,
                 }}
               >
-                {getPaymentFilterName(
-                  paymentFilter,
-                )}
+                {getPaymentFilterName(paymentFilter)}
               </div>
             </div>
           </div>
         </div>
 
         {/* TABLE */}
-        <div
-          className="sales-history-table"
-          style={styles.tableCard}
-        >
+        <div className="sales-history-table" style={styles.tableCard}>
           <div
             className="sales-history-table-header"
             style={styles.tableHeader}
           >
-            <div style={styles.tableHeaderCell}>
-              Продажа
-            </div>
+            <div style={styles.tableHeaderCell}>Продажа</div>
 
-            <div style={styles.tableHeaderCell}>
-              Способ оплаты
-            </div>
+            <div style={styles.tableHeaderCell}>Способ оплаты</div>
 
-            <div style={styles.tableHeaderCell}>
-              Продавец
-            </div>
+            <div style={styles.tableHeaderCell}>Продавец</div>
 
             <div
               style={{
@@ -999,95 +865,65 @@ export default function SalesHistory({ onBack }) {
               Сумма
             </div>
 
-            <div style={styles.tableHeaderCell}>
-              Действие
-            </div>
+            <div style={styles.tableHeaderCell}>Действие</div>
           </div>
 
           {loading ? (
             <div style={styles.emptyState}>
-              <RefreshCw
-                size={28}
-                style={styles.refreshIconLoading}
-              />
+              <RefreshCw size={28} style={styles.refreshIconLoading} />
 
-              <div>
-                Загрузка истории продаж...
-              </div>
+              <div>Загрузка истории продаж...</div>
             </div>
           ) : filteredSales.length === 0 ? (
             <div style={styles.emptyState}>
               <ShoppingCart size={40} />
 
-              <div style={styles.emptyTitle}>
-                Продажи не найдены
-              </div>
+              <div style={styles.emptyTitle}>Продажи не найдены</div>
 
               <div style={styles.emptyText}>
-                За выбранный период и способ оплаты
-                продаж нет
+                За выбранный период и способ оплаты продаж нет
               </div>
             </div>
           ) : (
             <>
               {filteredSales.map((sale, index) => {
-                const payment =
-                  sale.payment || {};
+                const payment = sale.payment || {};
 
-                const paymentType =
-                  getPaymentType(payment);
+                const paymentType = getPaymentType(payment);
 
-                const Icon =
-                  getPaymentIcon(payment);
+                const Icon = getPaymentIcon(payment);
 
                 const isFilteredMethod =
-                  paymentFilter !== "all" &&
-                  paymentFilter !== "mixed";
+                  paymentFilter !== "all" && paymentFilter !== "mixed";
 
-                const fullTotal = Number(
-                  sale.totalSom || 0,
-                );
+                const fullTotal = Number(sale.totalSom || 0);
 
-                const saleItems =
-                  getSaleItems(sale);
+                const saleItems = getSaleItems(sale);
 
-                const isCancelled =
-                  sale.cancelled === true;
+                const isCancelled = sale.cancelled === true;
 
-                const isCancelling =
-                  cancellingSaleId === sale.id;
+                const isCancelling = cancellingSaleId === sale.id;
 
                 return (
                   <div
                     key={
-                      sale.id ||
-                      sale.orderId ||
-                      `${sale.createdAt}-${index}`
+                      sale.id || sale.orderId || `${sale.createdAt}-${index}`
                     }
                     className={`sales-history-row${
-                      isCancelled
-                        ? " cancelled"
-                        : ""
+                      isCancelled ? " cancelled" : ""
                     }`}
                     style={{
                       ...styles.tableRow,
-                      ...(isCancelled
-                        ? styles.cancelledRow
-                        : {}),
+                      ...(isCancelled ? styles.cancelledRow : {}),
                     }}
                   >
                     {/* SALE */}
-                    <div
-                      className="sales-history-sale"
-                      style={styles.saleCell}
-                    >
+                    <div className="sales-history-sale" style={styles.saleCell}>
                       <div
                         className="sales-history-sale-icon"
                         style={{
                           ...styles.saleIcon,
-                          ...(isCancelled
-                            ? styles.cancelledIcon
-                            : {}),
+                          ...(isCancelled ? styles.cancelledIcon : {}),
                         }}
                       >
                         {isCancelled ? (
@@ -1097,26 +933,15 @@ export default function SalesHistory({ onBack }) {
                         )}
                       </div>
 
-                      <div
-                        style={
-                          styles.productsContent
-                        }
-                      >
+                      <div style={styles.productsContent}>
                         {saleItems.length > 0 ? (
                           saleItems.map((item) => (
-                            <div
-                              key={item.id}
-                              style={
-                                styles.productRow
-                              }
-                            >
+                            <div key={item.id} style={styles.productRow}>
                               <span
                                 className="sales-history-product-name"
                                 style={{
                                   ...styles.productName,
-                                  ...(isCancelled
-                                    ? styles.cancelledText
-                                    : {}),
+                                  ...(isCancelled ? styles.cancelledText : {}),
                                 }}
                               >
                                 {item.name}
@@ -1126,9 +951,7 @@ export default function SalesHistory({ onBack }) {
                                 className="sales-history-product-quantity"
                                 style={{
                                   ...styles.productQuantity,
-                                  ...(isCancelled
-                                    ? styles.cancelledText
-                                    : {}),
+                                  ...(isCancelled ? styles.cancelledText : {}),
                                 }}
                               >
                                 × {item.quantity}
@@ -1139,9 +962,7 @@ export default function SalesHistory({ onBack }) {
                           <div
                             style={{
                               ...styles.productName,
-                              ...(isCancelled
-                                ? styles.cancelledText
-                                : {}),
+                              ...(isCancelled ? styles.cancelledText : {}),
                             }}
                           >
                             Товары не указаны
@@ -1151,28 +972,18 @@ export default function SalesHistory({ onBack }) {
                         <div
                           style={{
                             ...styles.saleMeta,
-                            ...(isCancelled
-                              ? styles.cancelledMeta
-                              : {}),
+                            ...(isCancelled ? styles.cancelledMeta : {}),
                           }}
                         >
                           <Clock size={13} />
 
-                          {formatTime(
-                            sale.createdAt,
-                          )}
+                          {formatTime(sale.createdAt)}
 
-                          <span>
-                            {formatDate(sale.date)}
-                          </span>
+                          <span>{formatDate(sale.date)}</span>
                         </div>
 
                         {isCancelled && (
-                          <div
-                            style={
-                              styles.cancelledBadge
-                            }
-                          >
+                          <div style={styles.cancelledBadge}>
                             ПРОДАЖА ОТМЕНЕНА
                           </div>
                         )}
@@ -1188,9 +999,7 @@ export default function SalesHistory({ onBack }) {
                         className="sales-history-payment-icon"
                         style={{
                           ...styles.paymentIcon,
-                          ...(isCancelled
-                            ? styles.cancelledPaymentIcon
-                            : {}),
+                          ...(isCancelled ? styles.cancelledPaymentIcon : {}),
                         }}
                       >
                         <Icon size={17} />
@@ -1198,86 +1007,50 @@ export default function SalesHistory({ onBack }) {
 
                       <div
                         className="sales-history-payment-content"
-                        style={
-                          styles.paymentContent
-                        }
+                        style={styles.paymentContent}
                       >
                         {getPaymentName(payment)}
 
-                        {isFilteredMethod &&
-                          paymentType ===
-                            "mixed" && (
-                            <div
-                              style={
-                                styles.filteredPaymentHint
-                              }
-                            >
-                              Из общей суммы{" "}
-                              {formatMoney(
-                                fullTotal,
-                              )}{" "}
-                              сом
-                            </div>
-                          )}
+                        {isFilteredMethod && paymentType === "mixed" && (
+                          <div style={styles.filteredPaymentHint}>
+                            Из общей суммы {formatMoney(fullTotal)} сом
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     {/* SALESPERSON */}
                     <div
                       className="sales-history-salesperson"
-                      style={
-                        styles.salespersonCell
-                      }
+                      style={styles.salespersonCell}
                     >
                       <select
                         value={
                           salespersons.find(
                             (person) =>
-                              person.id ===
-                                sale.salesperson
-                                  ?.id ||
-                              person.name ===
-                                sale.salesperson
-                                  ?.id ||
-                              person.name ===
-                                sale.salesperson
-                                  ?.name,
+                              person.id === sale.salesperson?.id ||
+                              person.name === sale.salesperson?.id ||
+                              person.name === sale.salesperson?.name,
                           )?.id || ""
                         }
                         onChange={(e) =>
-                          updateSaleSalesperson(
-                            sale.id,
-                            e.target.value,
-                          )
+                          updateSaleSalesperson(sale.id, e.target.value)
                         }
-                        disabled={
-                          updatingSalespersonId ===
-                          sale.id
-                        }
+                        disabled={updatingSalespersonId === sale.id}
                         style={{
                           ...styles.salespersonSelect,
-                          ...(isCancelled
-                            ? styles.cancelledSelect
-                            : {}),
+                          ...(isCancelled ? styles.cancelledSelect : {}),
                         }}
                       >
-                        <option
-                          value=""
-                          disabled
-                        >
+                        <option value="" disabled>
                           Не указан
                         </option>
 
-                        {salespersons.map(
-                          (person) => (
-                            <option
-                              key={person.id}
-                              value={person.id}
-                            >
-                              {person.name}
-                            </option>
-                          ),
-                        )}
+                        {salespersons.map((person) => (
+                          <option key={person.id} value={person.id}>
+                            {person.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
@@ -1290,82 +1063,39 @@ export default function SalesHistory({ onBack }) {
                         className="amount-value"
                         style={{
                           ...styles.amount,
-                          ...(isCancelled
-                            ? styles.cancelledAmount
-                            : {}),
+                          ...(isCancelled ? styles.cancelledAmount : {}),
                         }}
                       >
-                        {formatMoney(
-                          sale.filteredAmount,
-                        )}{" "}
-                        сом
+                        {formatMoney(sale.filteredAmount)} сом
                       </div>
 
-                      {isFilteredMethod &&
-                        paymentType ===
-                          "mixed" && (
-                          <div
-                            style={
-                              styles.amountHint
-                            }
-                          >
+                      {isFilteredMethod && paymentType === "mixed" && (
+                        <div style={styles.amountHint}>
+                          {
                             {
-                              {
-                                cash: "Наличные",
-                                card: "Карта",
-                                amanat:
-                                  "Аманат",
-                                mplus: "М+",
-                                online_qr:
-                                  "Онлайн QR",
-                              }[
-                                paymentFilter
-                              ]
-                            }
-                          </div>
-                        )}
+                              cash: "Наличные",
+                              card: "Карта",
+                              amanat: "Аманат",
+                              mplus: "М+",
+                              online_qr: "Онлайн QR",
+                            }[paymentFilter]
+                          }
+                        </div>
+                      )}
 
-                      {paymentType ===
-                        "mixed" &&
-                        paymentFilter ===
-                          "all" && (
-                          <div
-                            style={
-                              styles.amountHint
-                            }
-                          >
-                            Общая сумма продажи
-                          </div>
-                        )}
+                      {paymentType === "mixed" && paymentFilter === "all" && (
+                        <div style={styles.amountHint}>Общая сумма продажи</div>
+                      )}
 
-                      {paymentType ===
-                        "mixed" &&
-                        paymentFilter ===
-                          "mixed" && (
-                          <div
-                            style={
-                              styles.amountHint
-                            }
-                          >
-                            Все способы
-                          </div>
-                        )}
+                      {paymentType === "mixed" && paymentFilter === "mixed" && (
+                        <div style={styles.amountHint}>Все способы</div>
+                      )}
 
-                      {paymentType ===
-                        "single" &&
-                        paymentFilter ===
-                          "all" && (
-                          <div
-                            style={
-                              styles.amountHint
-                            }
-                          >
-                            {getPaymentMethods(
-                              payment,
-                            )[0]?.name ||
-                              "Оплата"}
-                          </div>
-                        )}
+                      {paymentType === "single" && paymentFilter === "all" && (
+                        <div style={styles.amountHint}>
+                          {getPaymentMethods(payment)[0]?.name || "Оплата"}
+                        </div>
+                      )}
                     </div>
 
                     {/* ACTION */}
@@ -1374,30 +1104,20 @@ export default function SalesHistory({ onBack }) {
                       style={styles.actionCell}
                     >
                       {isCancelled ? (
-                        <div
-                          style={
-                            styles.cancelledAlready
-                          }
-                        >
+                        <div style={styles.cancelledAlready}>
                           <XCircle size={16} />
                           Отменена
                         </div>
                       ) : (
                         <button
                           type="button"
-                          onClick={() =>
-                            cancelSale(sale)
-                          }
+                          onClick={() => cancelSale(sale)}
                           disabled={isCancelling}
-                          style={
-                            styles.cancelButton
-                          }
+                          style={styles.cancelButton}
                         >
                           <XCircle size={16} />
 
-                          {isCancelling
-                            ? "Отмена..."
-                            : "Отменить"}
+                          {isCancelling ? "Отмена..." : "Отменить"}
                         </button>
                       )}
                     </div>
@@ -1406,10 +1126,7 @@ export default function SalesHistory({ onBack }) {
               })}
 
               {/* TOTAL */}
-              <div
-                className="sales-history-footer"
-                style={styles.tableFooter}
-              >
+              <div className="sales-history-footer" style={styles.tableFooter}>
                 <div
                   className="sales-history-footer-left"
                   style={styles.footerLeft}
@@ -1422,9 +1139,7 @@ export default function SalesHistory({ onBack }) {
                   style={styles.footerCenter}
                 >
                   {activeSalesCount}{" "}
-                  {activeSalesCount === 1
-                    ? "продажа"
-                    : "продаж"}
+                  {activeSalesCount === 1 ? "продажа" : "продаж"}
                 </div>
 
                 <div
@@ -1441,34 +1156,23 @@ export default function SalesHistory({ onBack }) {
         </div>
 
         {/* INFO */}
-        <div
-          className="sales-history-info"
-          style={styles.infoCard}
-        >
-          <div style={styles.infoTitle}>
-            Как работает отмена продажи
-          </div>
+        <div className="sales-history-info" style={styles.infoCard}>
+          <div style={styles.infoTitle}>Как работает отмена продажи</div>
 
           <div style={styles.infoText}>
             <div>
-              <strong>
-                Отменить продажу
-              </strong>{" "}
-              — продажа не удаляется из истории,
-              а только помечается как отменённая.
+              <strong>Отменить продажу</strong> — продажа не удаляется из
+              истории, а только помечается как отменённая.
             </div>
 
             <div>
-              Отменённая продажа отображается
-              красным цветом и не учитывается в
-              итоговой сумме и количестве активных
-              продаж.
+              Отменённая продажа отображается красным цветом и не учитывается в
+              итоговой сумме и количестве активных продаж.
             </div>
 
             <div>
-              Это позволяет сохранить историю
-              операции и при этом исключить её из
-              отчётов.
+              Это позволяет сохранить историю операции и при этом исключить её
+              из отчётов.
             </div>
           </div>
         </div>
@@ -1647,8 +1351,7 @@ const styles = {
 
   summaryGrid: {
     display: "grid",
-    gridTemplateColumns:
-      "repeat(3, minmax(0, 1fr))",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
     gap: "16px",
     marginBottom: "18px",
   },
@@ -1698,8 +1401,7 @@ const styles = {
 
   tableHeader: {
     display: "grid",
-    gridTemplateColumns:
-      "1.25fr 1.35fr 0.9fr 0.65fr 0.8fr",
+    gridTemplateColumns: "1.25fr 1.35fr 0.9fr 0.65fr 0.8fr",
     background: "#f8fafc",
     borderBottom: "1px solid #e2e8f0",
     padding: "14px 20px",
@@ -1716,14 +1418,12 @@ const styles = {
 
   tableRow: {
     display: "grid",
-    gridTemplateColumns:
-      "1.25fr 1.35fr 0.9fr 0.65fr 0.8fr",
+    gridTemplateColumns: "1.25fr 1.35fr 0.9fr 0.65fr 0.8fr",
     padding: "18px 20px",
     gap: "20px",
     alignItems: "center",
     borderBottom: "1px solid #f1f5f9",
-    transition:
-      "background 0.2s ease, opacity 0.2s ease",
+    transition: "background 0.2s ease, opacity 0.2s ease",
   },
 
   cancelledRow: {
@@ -1960,8 +1660,7 @@ const styles = {
 
   tableFooter: {
     display: "grid",
-    gridTemplateColumns:
-      "1.25fr 1.35fr 0.9fr 0.65fr 0.8fr",
+    gridTemplateColumns: "1.25fr 1.35fr 0.9fr 0.65fr 0.8fr",
     padding: "18px 20px",
     gap: "20px",
     alignItems: "center",
@@ -2338,4 +2037,3 @@ const mobileStyles = `
 `;
 
 export { styles as OriginalStyles };
-

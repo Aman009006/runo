@@ -14,6 +14,7 @@ import {
   Users,
   Trash2,
   Plus,
+  Coins,
 } from "lucide-react";
 
 import API_URL from "./config.js";
@@ -32,6 +33,7 @@ import runoLogo2 from "./runo2.png";
 import runoLogo3 from "./runo3.png";
 import WriteOff from "./WriteOff";
 import Login from "./Login";
+import BudgetPage from "./BudgetPage";
 
 const SHIFT_STORAGE_KEY = "moysklad_retail_shift_id";
 
@@ -417,6 +419,12 @@ function App() {
       icon: RefreshCw,
       onClick: () => setIsWriteOffOpen(true),
     },
+    {
+      title: "Касса игра",
+      description: "Игра в кассу",
+      icon: Coins,
+      onClick: () => setActiveTab("Касса"),
+    },
   ];
 
   /*
@@ -435,6 +443,8 @@ function App() {
       });
 
       const data = await response.json();
+
+      console.log("Персонал:", data);
 
       if (!response.ok || !data.success) {
         throw new Error(data.message || "Не удалось загрузить персонал");
@@ -588,6 +598,10 @@ function App() {
     return <Reports onBack={() => setActiveTab(null)} />;
   }
 
+  if (activeTab === "Касса") {
+    return <BudgetPage onBack={() => setActiveTab(null)} />;
+  }
+ 
   if (isAmanatOpen) {
     return <Amanat onBack={() => setIsAmanatOpen(false)} />;
   }
@@ -622,8 +636,6 @@ function App() {
         padding: "32px",
       }}
     >
-    
-
       <img
         src={runoLogo2}
         alt="Logo"
@@ -886,7 +898,7 @@ function App() {
       >
         <Users size={24} />
       </button>
-  {/* ФИЛИАЛ + ВЫХОД */}
+      {/* ФИЛИАЛ + ВЫХОД */}
 
       <div
         style={{
