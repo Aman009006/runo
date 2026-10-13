@@ -26,6 +26,7 @@ import Expenses from "./Expenses";
 import Transfers from "./Transfers";
 import SalesHistory from "./SalesHistory";
 import Collection from "./Collection";
+import StatisticForAdmin from "./StatisticForAdmin";
 import Amanat from "./Amanat";
 import Reports from "./Reports";
 import runoLogo from "./runo.PNG";
@@ -621,6 +622,10 @@ function App() {
   if (activeTab === "Инкассация") {
     return <Collection onBack={() => setActiveTab(null)} />;
   }
+
+  if (window.location.pathname === "/statisticForAdmin") {
+  return <StatisticForAdmin />;
+}
 
   /*
   |--------------------------------------------------------------------------
