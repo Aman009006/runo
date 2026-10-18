@@ -72,14 +72,17 @@ function mergeProducts(reports) {
   return [...map.values()].sort((a, b) => b.quantity - a.quantity);
 }
 
+
 function mergeSellers(reports) {
   const map = new Map();
 
   for (const report of reports) {
     for (const seller of report.sellers || []) {
-      const key = `${report.branch}:${seller.name}`;
+      const sellerName = seller.name || seller.id || "Не указан";
+      const key = `${report.branch}:${sellerName}`;
+
       const existing = map.get(key) || {
-        name: seller.id || "Не указан",
+        name: sellerName,
         branchName: report.branchName,
         salesCount: 0,
         amount: 0,
@@ -326,6 +329,7 @@ export default function StatisticForAdmin() {
       if (!response.ok || !data.success) {
         throw new Error(data.message || "Не удалось загрузить статистику.");
       }
+      console.log("report", data);
 
       setReport(data);
     } catch (err) {
@@ -535,13 +539,6 @@ export default function StatisticForAdmin() {
           </section>
 
           <section className="stat-details-grid">
-            <div className="stat-card stat-trend-card">
-              <div className="stat-card-heading">
-                <h3>Динамика продаж</h3>
-                <span>По дням, сом</span>
-              </div>
-              <TrendChart items={trend} />
-            </div>
 
             <div className="stat-card">
               <div className="stat-card-heading">
@@ -562,7 +559,7 @@ export default function StatisticForAdmin() {
                     </thead>
                     <tbody>
 
-                      {sellers.slice(0, 10).map((seller, index) => (
+                      {sellers.map((seller, index) => (
                         <tr key={`${seller.name}-${seller.branchName}-${index}`}>
                           <td>
                             <span className="stat-rank">{index + 1}</span>
@@ -599,7 +596,7 @@ export default function StatisticForAdmin() {
                       </tr>
                     </thead>
                     <tbody>
-                      {products.slice(0, 10).map((product) => (
+                      {products.slice(0, 35).map((product) => (
                         <tr key={product.id}>
                           <td>{product.name}</td>
                           <td>{product.article || "—"}</td>
@@ -613,6 +610,14 @@ export default function StatisticForAdmin() {
               ) : (
                 <div className="stat-empty">Нет данных о проданных товарах</div>
               )}
+            </div>
+
+            <div className="stat-card stat-trend-card">
+              <div className="stat-card-heading">
+                <h3>Динамика продаж</h3>
+                <span>По дням, сом</span>
+              </div>
+              <TrendChart items={trend} />
             </div>
           </section>
         </>
