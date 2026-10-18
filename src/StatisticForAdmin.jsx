@@ -79,7 +79,7 @@ function mergeSellers(reports) {
     for (const seller of report.sellers || []) {
       const key = `${report.branch}:${seller.name}`;
       const existing = map.get(key) || {
-        name: seller.name || "Не указан",
+        name: seller.id || "Не указан",
         branchName: report.branchName,
         salesCount: 0,
         amount: 0,
@@ -563,10 +563,10 @@ export default function StatisticForAdmin() {
                     <tbody>
 
                       {sellers.slice(0, 10).map((seller, index) => (
-                        <tr key={`${seller.name}-${seller.id}-${seller.branchName}-${index}`}>
+                        <tr key={`${seller.name}-${seller.branchName}-${index}`}>
                           <td>
                             <span className="stat-rank">{index + 1}</span>
-                            {seller.name}-{seller.id}
+                            {seller.name}
                           </td>
                           <td>{seller.branchName}</td>
                           <td>{number(seller.salesCount)}</td>
