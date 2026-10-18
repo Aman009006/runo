@@ -561,11 +561,12 @@ export default function StatisticForAdmin() {
                       </tr>
                     </thead>
                     <tbody>
+
                       {sellers.slice(0, 10).map((seller, index) => (
-                        <tr key={`${seller.name}-${seller.branchName}-${index}`}>
+                        <tr key={`${seller.name}-${seller.id}-${seller.branchName}-${index}`}>
                           <td>
                             <span className="stat-rank">{index + 1}</span>
-                            {seller.name}
+                            {seller.name}-{seller.id}
                           </td>
                           <td>{seller.branchName}</td>
                           <td>{number(seller.salesCount)}</td>
