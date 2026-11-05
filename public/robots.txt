@@ -1,3 +1,9 @@
-# https://www.robotstxt.org/robotstxt.html
+
 User-agent: *
-Disallow:
+Allow: /
+
+Disallow: /cash
+Disallow: /statisticForAdmin
+Disallow: /shop-admin
+
+Sitemap: https://runo.kg/sitemap.xml
