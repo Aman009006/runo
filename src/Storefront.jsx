@@ -12,6 +12,7 @@ import ProductCard from "./ProductCard";
 import "./Storefront.css";
 import runoLogo from "./runo.PNG";
 import runoLogo2 from "./imgs/RUNOBOLD.png";
+import runoLogo3 from "./imgs/RUNOCURSIV.png";
 
 import HeroSlider from "./HeroSlider";
 import ProductPage from "./ProductPage";
@@ -1012,7 +1013,12 @@ if (selectedProductId) {
 
 
   return (
-    <div className="shop-shell">
+    <div
+  className="shop-shell"
+  style={{
+    "--shop-pattern": `url("${runoLogo3}")`,
+  }}
+>
       
       <header className="shop-header">
         <div className="shop-header-main shop-container">
