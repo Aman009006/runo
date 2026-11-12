@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   ShoppingCart,
   Search,
@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import API_URL from "./config.js";
 const SHIFT_STORAGE_KEY = "moysklad_retail_shift_id";
+const ONLINE_CASH_CHANNEL = "runo-online-cash";
+const ONLINE_CASH_STORAGE_KEY = "runo-online-cash-state";
 function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -34,6 +36,7 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
     credit: "",
     delivery: "",
     online_qr: "",
+    obank_qr: "",
   });
   const [isCheckoutProcessing, setIsCheckoutProcessing] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
@@ -41,6 +44,79 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth <= 768 : false,
   );
+    const subtotalKopecks = useMemo(() => {
+    return cart.reduce((sum, item) => {
+      const price = Number(item.price || 0);
+      return sum + price * item.qty;
+    }, 0);
+  }, [cart]);
+  
+  const totalSom = subtotalKopecks;
+
+
+const onlineCashChannelRef = useRef(null);
+
+const sendOnlineCashPayment = (paymentData) => {
+  const message = {
+    type: "PAYMENT_UPDATE",
+    ...paymentData,
+    updatedAt: Date.now(),
+  };
+
+  onlineCashChannelRef.current?.postMessage(message);
+
+  try {
+    localStorage.setItem(
+      "runo-online-cash-payment-state",
+      JSON.stringify(message),
+    );
+  } catch (error) {
+    console.error("Ошибка передачи статуса оплаты:", error);
+  }
+};
+
+// Канал связи со вторым экраном
+useEffect(() => {
+  if (typeof BroadcastChannel === "undefined") return;
+
+  const channel = new BroadcastChannel(ONLINE_CASH_CHANNEL);
+  onlineCashChannelRef.current = channel;
+
+  return () => {
+    channel.close();
+    onlineCashChannelRef.current = null;
+  };
+}, []);
+
+// Передаём актуальную корзину на второй экран
+useEffect(() => {
+  const snapshot = {
+    type: "CART_UPDATE",
+    isOpen: Boolean(isOpen),
+    items: isOpen
+      ? cart.map((item) => ({
+          id: item.id,
+          name: item.name || "Без названия",
+          price: Number(item.price || 0),
+          quantity: Number(item.qty || 0),
+        }))
+      : [],
+    total: isOpen ? Number(totalSom || 0) : 0,
+    updatedAt: Date.now(),
+  };
+
+  try {
+    localStorage.setItem(
+      ONLINE_CASH_STORAGE_KEY,
+      JSON.stringify(snapshot),
+    );
+  } catch (error) {
+    console.error("Не удалось сохранить состояние онлайн-кассы:", error);
+  }
+
+  onlineCashChannelRef.current?.postMessage(snapshot);
+}, [cart, totalSom, isOpen]);
+
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth <= 768);
@@ -236,15 +312,10 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
       credit: "",
       delivery: "",
       online_qr: "",
+      obank_qr: "",
     });
   };
-  const subtotalKopecks = useMemo(() => {
-    return cart.reduce((sum, item) => {
-      const price = Number(item.price || 0);
-      return sum + price * item.qty;
-    }, 0);
-  }, [cart]);
-  const totalSom = subtotalKopecks;
+
   const selectedCashboxPerson = useMemo(
     () =>
       cashboxPeople.find(
@@ -267,6 +338,7 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
       Number(paymentAmounts.credit || 0) +
       Number(paymentAmounts.delivery || 0) +
       Number(paymentAmounts.online_qr || 0) +
+      Number(paymentAmounts.obank_qr || 0) +
       mixedCashboxAmount
     );
   }, [paymentAmounts, mixedCashboxAmount]);
@@ -353,6 +425,7 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
         delivery: 0,
         online_qr: 0,
         cashbox: 0,
+        obank_qr: 0
       };
     }
     if (paymentMethod === "card") {
@@ -363,6 +436,7 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
         delivery: 0,
         online_qr: 0,
         cashbox: 0,
+        obank_qr: 0
       };
     }
     if (paymentMethod === "credit") {
@@ -373,6 +447,7 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
         delivery: 0,
         online_qr: 0,
         cashbox: 0,
+        obank_qr: 0
       };
     }
     if (paymentMethod === "delivery") {
@@ -383,6 +458,7 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
         delivery: totalSom,
         online_qr: 0,
         cashbox: 0,
+        obank_qr: 0
       };
     }
     if (paymentMethod === "online_qr") {
@@ -403,8 +479,20 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
         delivery: 0,
         online_qr: 0,
         cashbox: Number(selectedCashboxPerson?.amount || 0),
+        obank_qr: 0
       };
     }
+    if (paymentMethod === "obank_qr") {
+  return {
+    cash: 0,
+    card: 0,
+    credit: 0,
+    delivery: 0,
+    online_qr: 0,
+    obank_qr: totalSom,
+    cashbox: 0,
+  };
+}
 
     return {
       cashbox: mixedCashboxAmount,
@@ -413,145 +501,290 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
       credit: Number(paymentAmounts.credit || 0),
       delivery: Number(paymentAmounts.delivery || 0),
       online_qr: Number(paymentAmounts.online_qr || 0),
+      obank_qr: Number(paymentAmounts.obank_qr || 0),
     };
   };
-  const handleCheckout = async () => {
-    if (isCheckoutProcessing) {
+ const handleCheckout = async () => {
+  if (isCheckoutProcessing || cart.length === 0) {
+    return;
+  }
+
+  if (paymentMethod === "all" && !isMixedPaymentValid) {
+    return;
+  }
+
+  if (paymentMethod === "cashbox") {
+    if (!selectedCashboxPerson) {
+      alert("Выберите человека из списка ожидающих.");
       return;
     }
-    if (cart.length === 0) {
-      return;
-    }
-    if (paymentMethod === "all" && !isMixedPaymentValid) {
-      return;
-    }
 
-    if (paymentMethod === "cashbox") {
-      if (!selectedCashboxPerson) {
-        alert("Выберите человека из списка ожидающих.");
-        return;
-      }
+    const expectedAmount = Number(selectedCashboxPerson.amount || 0);
 
-      const expectedAmount = Number(selectedCashboxPerson.amount || 0);
-
-      if (Math.round(totalSom * 100) < Math.round(expectedAmount * 100)) {
-        alert(
-          `Сумма покупки не может быть меньше ожидаемой суммы ${expectedAmount.toLocaleString("ru-RU")} сом.`,
-        );
-        return;
-      }
-
-      if (Math.round(totalSom * 100) > Math.round(expectedAmount * 100)) {
-        alert(
-          "Сумма покупки больше ожидаемой суммы. Выберите «Смешанная» оплату и оплатите остаток другим способом.",
-        );
-        return;
-      }
-    }
-
-    if (
-      paymentMethod === "all" &&
-      selectedMixedCashboxPerson &&
-      totalSom <= Number(selectedMixedCashboxPerson.amount || 0)
-    ) {
+    if (Math.round(totalSom * 100) < Math.round(expectedAmount * 100)) {
       alert(
-        "При оплате через кассу сумма покупки должна быть больше ожидаемой суммы. Остаток оплатите другим способом.",
+        `Сумма покупки не может быть меньше ожидаемой суммы ${expectedAmount.toLocaleString("ru-RU")} сом.`,
       );
       return;
     }
 
-    const retailShiftSyncId = localStorage.getItem(SHIFT_STORAGE_KEY);
-    if (!retailShiftSyncId) {
-      alert("Смена не открыта. Сначала откройте кассовую смену.");
+    if (Math.round(totalSom * 100) > Math.round(expectedAmount * 100)) {
+      alert(
+        "Сумма покупки больше ожидаемой суммы. Выберите «Смешанная» оплату и оплатите остаток другим способом.",
+      );
       return;
     }
-    setIsCheckoutProcessing(true);
-    const payments = getPaymentBreakdown();
-    const totalInKopecks = Math.round(Number(totalSom || 0) * 100);
-    const paymentInKopecks = {
-      cash: Math.round(Number(payments.cash || 0) * 100),
-      card: Math.round(Number(payments.card || 0) * 100),
-      amanat: Math.round(Number(payments.delivery || 0) * 100),
-      mplus: Math.round(Number(payments.credit || 0) * 100),
-      online_qr: Math.round(Number(payments.online_qr || 0) * 100),
-      cashbox: Math.round(Number(payments.cashbox || 0) * 100),
-    };
-    const selectedSeller = salespersons.find(
-      (seller) => (seller.id || seller.syncId) === selectedSalesperson,
+  }
+
+  if (
+    paymentMethod === "all" &&
+    selectedMixedCashboxPerson &&
+    totalSom <= Number(selectedMixedCashboxPerson.amount || 0)
+  ) {
+    alert(
+      "При оплате через кассу сумма покупки должна быть больше ожидаемой суммы. Остаток оплатите другим способом.",
     );
-    const orderData = {
-      orderId: `MS-POS-${Math.floor(100000 + Math.random() * 900000)}`,
-      date: new Date().toLocaleString("ru-RU"),
-      items: cart.map((item) => ({
-        id: item.id,
-        name: item.name,
-        price: Number(item.price || 0),
-        quantity: Number(item.qty || 0),
-        type: item.type || "product",
-      })),
-      subtotal: subtotalKopecks,
-      total: totalSom,
-      paymentMethod,
-      payments,
-      salespersonId: selectedSeller?.id || selectedSeller?.syncId || null,
-      salesperson:
-        selectedSeller?.name ||
-        selectedSeller?.fullName ||
-        selectedSeller?.title ||
-        "",
-    };
-    try {
-      const response = await fetch(`${API_URL}/api/moysklad/sales`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          orderId: orderData.orderId,
-          items: orderData.items,
-          total: totalInKopecks,
-          payment: {
-            method: paymentMethod,
-            ...paymentInKopecks,
-          },
-          cashboxEntryId:
-            paymentMethod === "cashbox"
-              ? selectedCashboxPerson?.id || null
-              : paymentMethod === "all"
-                ? selectedMixedCashboxPerson?.id || null
-                : null,
-          cashboxPerson:
-            paymentMethod === "cashbox"
-              ? selectedCashboxPerson
-              : paymentMethod === "all"
-                ? selectedMixedCashboxPerson
-                : null,
-          retailShiftSyncId,
-          salespersonId: orderData.salespersonId,
-          salesperson: orderData.salesperson,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || "Не удалось создать продажу");
-      }
-      console.log("Продажа создана в МойСклад:", data);
-      setLastOrder(orderData);
-      setShowReceiptModal(true);
-      clearCart();
-      clearPaymentAmounts();
-      setPaymentMethod("cash");
-      setSelectedCashboxPersonId("");
-      setSelectedMixedCashboxPersonId("");
-      await Promise.all([onRefresh(), fetchCashboxPeople()]);
-      setIsCheckoutProcessing(false);
-    } catch (error) {
-      console.error("Ошибка отправки продажи:", error);
-      alert(error.message || "Произошла ошибка при создании продажи");
-      setIsCheckoutProcessing(false);
-    }
+    return;
+  }
+
+  const retailShiftSyncId = localStorage.getItem(SHIFT_STORAGE_KEY);
+
+  if (!retailShiftSyncId) {
+    alert("Смена не открыта. Сначала откройте кассовую смену.");
+    return;
+  }
+
+  setIsCheckoutProcessing(true);
+
+  const payments = getPaymentBreakdown();
+  const totalInKopecks = Math.round(Number(totalSom || 0) * 100);
+
+  const paymentInKopecks = {
+    cash: Math.round(Number(payments.cash || 0) * 100),
+    card: Math.round(Number(payments.card || 0) * 100),
+    amanat: Math.round(Number(payments.delivery || 0) * 100),
+    mplus: Math.round(Number(payments.credit || 0) * 100),
+    online_qr: Math.round(Number(payments.online_qr || 0) * 100),
+    cashbox: Math.round(Number(payments.cashbox || 0) * 100),
+    obank_qr: Math.round(Number(payments.obank_qr || 0) * 100),
   };
+
+  const selectedSeller = salespersons.find(
+    (seller) => (seller.id || seller.syncId) === selectedSalesperson,
+  );
+
+  const orderData = {
+    orderId: `MS-POS-${Math.floor(100000 + Math.random() * 900000)}`,
+    date: new Date().toLocaleString("ru-RU"),
+    items: cart.map((item) => ({
+      id: item.id,
+      name: item.name,
+      price: Number(item.price || 0),
+      quantity: Number(item.qty || 0),
+      type: item.type || "product",
+    })),
+    subtotal: subtotalKopecks,
+    total: totalSom,
+    paymentMethod,
+    payments,
+    salespersonId: selectedSeller?.id || selectedSeller?.syncId || null,
+    salesperson:
+      selectedSeller?.name ||
+      selectedSeller?.fullName ||
+      selectedSeller?.title ||
+      "",
+  };
+
+  // Общий запрос создания продажи в МойСклад
+  const createSale = async () => {
+    const response = await fetch(`${API_URL}/api/moysklad/sales`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        orderId: orderData.orderId,
+        items: orderData.items,
+        total: totalInKopecks,
+        payment: {
+          method: paymentMethod,
+          ...paymentInKopecks,
+        },
+        cashboxEntryId:
+          paymentMethod === "cashbox"
+            ? selectedCashboxPerson?.id || null
+            : paymentMethod === "all"
+              ? selectedMixedCashboxPerson?.id || null
+              : null,
+        cashboxPerson:
+          paymentMethod === "cashbox"
+            ? selectedCashboxPerson
+            : paymentMethod === "all"
+              ? selectedMixedCashboxPerson
+              : null,
+        retailShiftSyncId,
+        salespersonId: orderData.salespersonId,
+        salesperson: orderData.salesperson,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Не удалось создать продажу");
+    }
+
+    return data;
+  };
+
+  try {
+    // 1. Если присутствует оплата через О! Банк — создаём QR-счёт
+    if (paymentInKopecks.obank_qr > 0) {
+      const invoiceResponse = await fetch(
+        `${API_URL}/api/obank/create-invoice`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            orderId: orderData.orderId,
+            amount: paymentInKopecks.obank_qr,
+          }),
+        },
+      );
+
+      const invoice = await invoiceResponse.json();
+
+      if (!invoiceResponse.ok) {
+        throw new Error(
+          invoice.message || "Не удалось создать QR-счёт О! Банка",
+        );
+      }
+
+      const qrCode =
+        invoice.qrCode ||
+        invoice.qr ||
+        invoice.data?.qr;
+
+      const paymentId =
+        invoice.invoiceId ||
+        invoice.invoice_id ||
+        invoice.data?.invoice_id ||
+        orderData.orderId;
+
+      if (!qrCode) {
+        throw new Error("Банк не вернул QR-код для оплаты");
+      }
+
+      // 2. Показываем QR на втором экране
+      sendOnlineCashPayment({
+        status: "pending",
+        qrCode,
+        amount: paymentInKopecks.obank_qr / 100,
+        paymentId,
+      });
+
+      // 3. Ожидаем подтверждения оплаты
+      const maxAttempts = 200;
+      let isApproved = false;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+
+        const statusResponse = await fetch(
+          `${API_URL}/api/obank/check-status`,
+          {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              orderId: orderData.orderId,
+            }),
+          },
+        );
+
+        const statusData = await statusResponse.json();
+
+        if (!statusResponse.ok) {
+          throw new Error(
+            statusData.message || "Не удалось проверить оплату О! Банка",
+          );
+        }
+
+        const status = String(
+          statusData.status || statusData.data?.status || "",
+        ).toLowerCase();
+
+        if (status === "approved") {
+          isApproved = true;
+          break;
+        }
+
+        if (status === "canceled") {
+          sendOnlineCashPayment({
+            status: "failed",
+            qrCode: "",
+            amount: 0,
+            paymentId,
+          });
+
+          throw new Error("Оплата через О! Банк отменена.");
+        }
+
+        // processing — продолжаем ожидание
+      }
+
+      if (!isApproved) {
+        throw new Error(
+          "Время ожидания оплаты истекло. Проверьте статус платежа в банке перед повторной попыткой.",
+        );
+      }
+
+      // 4. Банк подтвердил оплату
+      sendOnlineCashPayment({
+        status: "success",
+        qrCode: "",
+        amount: paymentInKopecks.obank_qr / 100,
+        paymentId,
+      });
+    }
+
+    // 5. Создаём продажу только после подтверждения QR
+    const data = await createSale();
+
+    console.log("Продажа создана в МойСклад:", data);
+
+    setLastOrder(orderData);
+    setShowReceiptModal(true);
+
+    clearCart();
+    clearPaymentAmounts();
+
+    setPaymentMethod("cash");
+    setSelectedCashboxPersonId("");
+    setSelectedMixedCashboxPersonId("");
+
+    await Promise.all([onRefresh(), fetchCashboxPeople()]);
+  } catch (error) {
+    console.error("Ошибка оформления продажи:", error);
+
+    sendOnlineCashPayment({
+      status: "failed",
+      qrCode: "",
+      amount: 0,
+      paymentId: orderData.orderId,
+    });
+
+    alert(error.message || "Произошла ошибка при создании продажи");
+  } finally {
+    setIsCheckoutProcessing(false);
+  }
+};
   const handleForceRefresh = async () => {
     try {
       const response = await fetch(`${API_URL}/api/moysklad/products/refresh`, {
@@ -1341,6 +1574,7 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
                     ["online_qr", "Онлайн QR"],
                     ["cashbox", "Касса"],
                     ["all", "Смешанная"],
+                    ["obank_qr", "О! Банк QR"],
                   ].map(([method, label]) => (
                     <button
                       key={method}
@@ -1544,6 +1778,7 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
                       ["credit", "Кредит"],
                       ["delivery", "Аманат"],
                       ["online_qr", "Онлайн QR"],
+                      ["obank_qr", "О! Банк QR"],
                     ].map(([method, label]) => (
                       <div
                         key={method}
@@ -1860,6 +2095,7 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
                   delivery: "Аманат",
                   online_qr: "Онлайн QR",
                   cashbox: "Касса",
+                  obank_qr: "О! Банк QR",
                 };
                 return (
                   <div

@@ -396,6 +396,11 @@ export default function Reports({ onBack }) {
         value: Number(payments.online_qr) || 0,
       },
       {
+  key: "obank_qr",
+  name: "О! Банк QR",
+  value: Number(payments.obank_qr) || 0,
+},
+      {
         key: "local",
         name: "Локальная оплата",
         value: Number(payments.local) || 0,

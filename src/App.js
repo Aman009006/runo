@@ -4,6 +4,8 @@ import Storefront from "./Storefront";
 import ProductPage from "./ProductPage";
 import CashApp from "./CashApp";
 import ShopAdmin from "./ShopAdmin";
+import MetaAnalys from "./MetaAnalys";
+import OnlineCash from "./OnlineCash";
 
 const trackPixel = (event, data = {}) => {
   if (typeof window !== "undefined" && typeof window.fbq === "function") {
@@ -24,6 +26,10 @@ function getRoute() {
 
   if (path === "/shop-admin") {
     return { page: "shop-admin" };
+  }
+
+  if (path === "/target-info") {
+    return { page: "target-info" };
   }
 
   const productMatch = path.match(/^\/product\/([^/]+)$/);
@@ -133,6 +139,14 @@ export default function App() {
   if (route.page === "shop-admin") {
     return <ShopAdmin />;
   }
+
+   if (route.page === "target-info") {
+    return <MetaAnalys />;
+  }
+  
+  if (window.location.pathname === "/online-cash") {
+  return <OnlineCash />;
+}
 
   if (route.page === "product") {
     return (

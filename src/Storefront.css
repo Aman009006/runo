@@ -1402,3 +1402,48 @@ button.is-added:focus-visible {
     box-sizing: border-box;
   }
 }
+.shop-product-variations {
+  margin: 18px 0;
+}
+
+.shop-product-variations-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #18211f;
+  margin-bottom: 10px;
+}
+
+.shop-product-variations-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.shop-product-variation {
+  width: 62px;
+  height: 68px;
+  padding: 3px;
+  border: 1px solid #e8ebe7;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.shop-product-variation img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: 5px;
+}
+
+.shop-product-variation:hover {
+  border-color: #2563eb;
+  transform: translateY(-2px);
+}
+
+.shop-product-variation:active {
+  transform: scale(0.96);
+}

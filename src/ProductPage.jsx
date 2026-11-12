@@ -638,6 +638,50 @@ const trackPixel = (event, data = {}) => {
     );
   }, [products, productId]);
 
+// Вариации текущего товара
+const variations = useMemo(() => {
+  if (!product) return [];
+
+  // Характеристики, по которым ищем варианты
+  const variationFields = [
+    "filling",
+    "bedType",
+    "season",
+  ];
+
+  return products.filter((item) => {
+    // Не показываем текущий товар
+    if (String(item.id) === String(product.id)) {
+      return false;
+    }
+
+    // Только та же категория
+    if (String(item.category) !== String(product.category)) {
+      return false;
+    }
+
+    // Проверяем заполненные характеристики
+    return variationFields.every((field) => {
+      const currentValue = product[field];
+
+      // Если у текущего товара характеристика пустая,
+      // не учитываем её при поиске
+      if (
+        currentValue === undefined ||
+        currentValue === null ||
+        String(currentValue).trim() === ""
+      ) {
+        return true;
+      }
+
+      return (
+        String(item[field] ?? "").trim() ===
+        String(currentValue).trim()
+      );
+    });
+  });
+}, [products, product]);
+
   // Сбрасываем состояние при смене товара
   useEffect(() => {
     setQuantity(1);
@@ -1020,6 +1064,38 @@ const handleAddToCart = () => {
                 {t("отзывов", "пикир")}
               </span>
             </div>
+
+            {/* ВАРИАНТЫ ТОВАРА */}
+{variations.length > 0 && (
+  <div className="shop-product-variations">
+    <div className="shop-product-variations-title">
+      {t("Другие варианты", "Башка варианттар")}
+    </div>
+
+    <div className="shop-product-variations-list">
+      {variations.map((item) => (
+        <button
+          type="button"
+          key={item.id}
+          className={
+            String(item.id) === String(product.id)
+              ? "shop-product-variation active"
+              : "shop-product-variation"
+          }
+          onClick={() => onOpenProduct?.(item.id)}
+          title={getProductTitle(item)}
+          aria-label={getProductTitle(item)}
+        >
+          <img
+            src={item.image}
+            alt={getProductTitle(item)}
+            loading="lazy"
+          />
+        </button>
+      ))}
+    </div>
+  </div>
+)}
 
             {/* ЦЕНА */}
             <div className="shop-product-price-block">
