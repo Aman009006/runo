@@ -355,78 +355,84 @@ function App() {
   | КАРТОЧКИ
   |--------------------------------------------------------------------------
   */
+console.log(branch,"branchbranchbranch");
 
-  const cards = [
-    {
-      title: "Продажа",
-      description: "Продажа товаров",
-      icon: ShoppingCart,
-      onClick: handleOpenCashier,
-    },
-    {
-      title: "Бронь",
-      description: "Бронирование товаров",
-      icon: Package,
-      onClick: () => {
-        setIsReservationsOpen(true);
-        fetchMoySkladProducts();
-      },
-    },
-    {
-      title: "Отправка/Приход",
-      description: "Отправка товаров/Поступление товаров",
-      icon: Truck,
-      onClick: () => setActiveTab("Отправка/Приход"),
-    },
-    {
-      title: "Возврат",
-      description: "Возврат товаров",
-      icon: RotateCcw,
-      onClick: handleOpenReturn,
-    },
-    {
-      title: "Расходы",
-      description: "Управление расходами",
-      icon: CreditCard,
-      onClick: () => setActiveTab("Расходы"),
-    },
-    {
-      title: "История продаж",
-      description: "История продаж",
-      icon: RotateCcwClock,
-      onClick: () => setActiveTab("История продаж"),
-    },
-    {
-      title: "Инкассация",
-      description: "Инкассация",
-      icon: CircleDollarSign,
-      onClick: () => setActiveTab("Инкассация"),
-    },
-    {
-      title: "Отчет",
-      description: "Отчет по продажам",
-      icon: FileStack,
-      onClick: () => setActiveTab("Отчет"),
-    },
-    {
-      title: "Аманат",
-      description: "Таблица задолженности аманата",
-      icon: Van,
-      onClick: () => setIsAmanatOpen(true),
-    },
-    {
-      title: "Списание",
-      description: "Списание товаров",
-      icon: RefreshCw,
-      onClick: () => setIsWriteOffOpen(true),
-    },
-    {
-      title: "Касса игра",
-      description: "Игра в кассу",
-      icon: Coins,
-      onClick: () => setActiveTab("Касса"),
-    },
-  ];
+ const reservationCard = {
+  title: "Бронь",
+  description: "Бронирование товаров",
+  icon: Package,
+  onClick: () => {
+    setIsReservationsOpen(true);
+    fetchMoySkladProducts();
+  },
+};
+
+const cards =
+  branch?.name === "Бишкек (команда)"
+    ? [reservationCard]
+    : [
+        {
+          title: "Продажа",
+          description: "Продажа товаров",
+          icon: ShoppingCart,
+          onClick: handleOpenCashier,
+        },
+        reservationCard,
+        {
+          title: "Отправка/Приход",
+          description: "Отправка товаров/Поступление товаров",
+          icon: Truck,
+          onClick: () => setActiveTab("Отправка/Приход"),
+        },
+        {
+          title: "Возврат",
+          description: "Возврат товаров",
+          icon: RotateCcw,
+          onClick: handleOpenReturn,
+        },
+        {
+          title: "Расходы",
+          description: "Управление расходами",
+          icon: CreditCard,
+          onClick: () => setActiveTab("Расходы"),
+        },
+        {
+          title: "История продаж",
+          description: "История продаж",
+          icon: RotateCcwClock,
+          onClick: () => setActiveTab("История продаж"),
+        },
+        {
+          title: "Инкассация",
+          description: "Инкассация",
+          icon: CircleDollarSign,
+          onClick: () => setActiveTab("Инкассация"),
+        },
+        {
+          title: "Отчет",
+          description: "Отчет по продажам",
+          icon: FileStack,
+          onClick: () => setActiveTab("Отчет"),
+        },
+        {
+          title: "Аманат",
+          description: "Таблица задолженности аманата",
+          icon: Van,
+          onClick: () => setIsAmanatOpen(true),
+        },
+        {
+          title: "Списание",
+          description: "Списание товаров",
+          icon: RefreshCw,
+          onClick: () => setIsWriteOffOpen(true),
+        },
+        {
+          title: "Касса игра",
+          description: "Игра в кассу",
+          icon: Coins,
+          onClick: () => setActiveTab("Касса"),
+        },
+      ];
 
   /*
   |--------------------------------------------------------------------------
@@ -591,6 +597,7 @@ function App() {
         error={error}
         onRefreshProducts={fetchMoySkladProducts}
         onBack={() => setIsReservationsOpen(false)}
+        branch={branch}
       />
     );
   }

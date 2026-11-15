@@ -15,6 +15,8 @@ import {
   ArrowLeft,
   Clock3,
   History,
+  Trash2,
+RotateCcw,
 } from "lucide-react";
 
 import API_URL from "./config.js";
@@ -59,6 +61,9 @@ function PersonColumn({
   openModal,
   markAsReceived,
   markingId,
+   deletePerson,
+  returnToWaiting,
+  actionId,
 }) {
   return (
     <section className="budget-panel">
@@ -123,9 +128,35 @@ function PersonColumn({
                   </div>
                 </div>
 
-                <strong className={`budget-amount ${type}`}>
-                  {money(person.amount)}
-                </strong>
+                <div className="budget-record-actions">
+  <strong className={`budget-amount ${type}`}>
+    {money(person.amount)}
+  </strong>
+
+  {type === "waiting" && (
+    <button
+      className="budget-action-icon delete"
+      title="Удалить запись"
+      aria-label={`Удалить ${person.name}`}
+      onClick={() => deletePerson(person)}
+      disabled={actionId === person.id}
+    >
+      <Trash2 size={17} />
+    </button>
+  )}
+
+  {type === "received" && (
+    <button
+      className="budget-action-icon restore"
+      title="Вернуть в ожидающие"
+      aria-label={`Вернуть ${person.name} в ожидание`}
+      onClick={() => returnToWaiting(person)}
+      disabled={actionId === person.id}
+    >
+      <RotateCcw size={17} />
+    </button>
+  )}
+</div>
               </div>
 
               {person.comment && (
@@ -201,6 +232,7 @@ export default function BudgetPage({ onBack }) {
   const [searchReceived, setSearchReceived] = useState("");
 
   const [searchHistory, setSearchHistory] = useState("");
+  const [actionId, setActionId] = useState(null);
 
   const loadData = useCallback(async (showLoader = true) => {
     if (showLoader) setLoading(true);
@@ -412,6 +444,81 @@ export default function BudgetPage({ onBack }) {
     }
   };
 
+  const deletePerson = async (person) => {
+  const confirmed = window.confirm(
+    `Удалить запись "${person.name}" на сумму ${money(person.amount)}?`,
+  );
+
+  if (!confirmed) return;
+
+  setActionId(person.id);
+  setError("");
+  setNotice("");
+
+  try {
+    const response = await fetch(
+      `${API_URL}/api/budget/entries/${encodeURIComponent(person.id)}`,
+      {
+        method: "DELETE",
+        credentials: "include",
+      },
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Не удалось удалить запись");
+    }
+
+    setNotice(`Запись "${person.name}" удалена`);
+
+    await loadData(false);
+  } catch (err) {
+    setError(err.message || "Ошибка удаления");
+  } finally {
+    setActionId(null);
+  }
+};
+
+const returnToWaiting = async (person) => {
+  const confirmed = window.confirm(
+    `Вернуть ${person.name} в список ожидающих?\n\n` +
+      `Сумма ${money(person.amount)} будет возвращена в бюджет.`,
+  );
+
+  if (!confirmed) return;
+
+  setActionId(person.id);
+  setError("");
+  setNotice("");
+
+  try {
+    const response = await fetch(
+      `${API_URL}/api/budget/entries/${encodeURIComponent(person.id)}/waiting`,
+      {
+        method: "PATCH",
+        credentials: "include",
+      },
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Не удалось вернуть человека");
+    }
+
+    setNotice(
+      `${person.name}: ${money(person.amount)} возвращено в бюджет`,
+    );
+
+    await loadData(false);
+  } catch (err) {
+    setError(err.message || "Ошибка возврата");
+  } finally {
+    setActionId(null);
+  }
+};
+
   const filterRows = (rows, query, fields) => {
     const q = query.trim().toLocaleLowerCase("ru");
 
@@ -613,6 +720,9 @@ export default function BudgetPage({ onBack }) {
             openModal={openModal}
             markAsReceived={markAsReceived}
             markingId={markingId}
+             deletePerson={deletePerson}
+  returnToWaiting={returnToWaiting}
+  actionId={actionId}
           />
 
           <PersonColumn
@@ -624,6 +734,9 @@ export default function BudgetPage({ onBack }) {
             openModal={openModal}
             markAsReceived={markAsReceived}
             markingId={markingId}
+              deletePerson={deletePerson}
+  returnToWaiting={returnToWaiting}
+  actionId={actionId}
           />
         </div>
       )}
@@ -686,20 +799,38 @@ export default function BudgetPage({ onBack }) {
                     <td>{dateTime(item.createdAt)}</td>
 
                     <td>
-                      <span
-                        className={`budget-type ${item.type === "topup" ? "topup" : "issued"}`}
-                      >
-                        {item.type === "topup" ? (
-                          <>
-                            <Plus size={12} /> Пополнение
-                          </>
-                        ) : (
-                          <>
-                            <ArrowUpRight size={12} /> Выдача
-                          </>
-                        )}
-                      </span>
-                    </td>
+  <span className={`budget-type ${item.type}`}>
+    {item.type === "topup" && (
+      <>
+        <Plus size={12} /> Пополнение
+      </>
+    )}
+
+    {item.type === "issued" && (
+      <>
+        <ArrowUpRight size={12} /> Выдача
+      </>
+    )}
+
+    {item.type === "added" && (
+      <>
+        <Plus size={12} /> Добавление
+      </>
+    )}
+
+    {item.type === "deleted" && (
+      <>
+        <Trash2 size={12} /> Удаление
+      </>
+    )}
+
+    {item.type === "returned" && (
+      <>
+        <RotateCcw size={12} /> Возврат в ожидание
+      </>
+    )}
+  </span>
+</td>
 
                     <td>
                       <strong>{item.name || "—"}</strong>
@@ -712,12 +843,14 @@ export default function BudgetPage({ onBack }) {
                     </td>
 
                     <td
-                      className={`budget-history-amount ${item.type === "topup" ? "topup" : "issued"}`}
-                    >
-                      {item.type === "topup" ? "+" : "−"}
+  className={`budget-history-amount ${item.type}`}
+>
+  {item.type === "topup" && "+"}
+  {item.type === "issued" && "−"}
+  {item.type === "returned" && "+"}
 
-                      {money(item.amount)}
-                    </td>
+  {money(item.amount)}
+</td>
 
                     <td>{item.comment || "—"}</td>
                   </tr>

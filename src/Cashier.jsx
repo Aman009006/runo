@@ -204,26 +204,59 @@ useEffect(() => {
     });
     return ["All", ...Array.from(cats)];
   }, [products]);
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const q = searchQuery.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        product.name?.toLowerCase().includes(q) ||
-        product.code?.toLowerCase().includes(q) ||
-        product.article?.toLowerCase().includes(q) ||
-        (product.barcodes &&
-          product.barcodes.some((barcode) =>
-            Object.values(barcode).some((value) =>
-              String(value).toLowerCase().includes(q),
-            ),
-          ));
-      const matchesCategory =
-        selectedCategory === "All" ||
-        (product.pathName && product.pathName.startsWith(selectedCategory));
-      return matchesSearch && matchesCategory;
-    });
-  }, [products, searchQuery, selectedCategory]);
+
+//Старый со всеми товарами 
+  // const filteredProducts = useMemo(() => {
+  //   return products.filter((product) => {
+  //     const q = searchQuery.toLowerCase().trim();
+  //     const matchesSearch =
+  //       !q ||
+  //       product.name?.toLowerCase().includes(q) ||
+  //       product.code?.toLowerCase().includes(q) ||
+  //       product.article?.toLowerCase().includes(q) ||
+  //       (product.barcodes &&
+  //         product.barcodes.some((barcode) =>
+  //           Object.values(barcode).some((value) =>
+  //             String(value).toLowerCase().includes(q),
+  //           ),
+  //         ));
+  //     const matchesCategory =
+  //       selectedCategory === "All" ||
+  //       (product.pathName && product.pathName.startsWith(selectedCategory));
+  //     return matchesSearch && matchesCategory;
+  //   });
+  // }, [products, searchQuery, selectedCategory]);
+
+
+const filteredProducts = useMemo(() => {
+  return products.filter((product) => {
+    // Показываем только товары в наличии
+    const inStock = Number(product.stock || 0) > 0;
+
+    const q = searchQuery.toLowerCase().trim();
+
+    const matchesSearch =
+      !q ||
+      product.name?.toLowerCase().includes(q) ||
+      product.code?.toLowerCase().includes(q) ||
+      product.article?.toLowerCase().includes(q) ||
+      (product.barcodes &&
+        product.barcodes.some((barcode) =>
+          Object.values(barcode).some((value) =>
+            String(value).toLowerCase().includes(q)
+          )
+        ));
+
+    const matchesCategory =
+      selectedCategory === "All" ||
+      (product.pathName &&
+        product.pathName.startsWith(selectedCategory));
+
+    return inStock && matchesSearch && matchesCategory;
+  });
+}, [products, searchQuery, selectedCategory]);
+
+
   const formatMoney = (value) => {
     return Number(value || 0).toLocaleString("ru-RU", {
       style: "currency",

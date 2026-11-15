@@ -1350,3 +1350,90 @@
   background: #f1f5f9;
   color: #0f172a;
 }
+.reservation-history {
+  margin-top: 18px;
+  padding: 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+.reservation-history-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 12px;
+  color: #1e293b;
+}
+
+.reservation-history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 10px 0;
+}
+
+.reservation-history-item span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.reservation-history-item strong {
+  color: #1e293b;
+  font-size: 13px;
+  text-align: right;
+}
+
+.reservation-history-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 12px 0;
+}
+
+.reservation-payment-history-item {
+  padding: 12px;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.reservation-payment-history-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.reservation-payment-history-method {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.reservation-payment-history-method span {
+  padding: 5px 9px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.reservation-payment-history-date {
+  display: block;
+  margin-top: 9px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .reservation-history-item {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .reservation-history-item strong {
+    text-align: left;
+  }
+}

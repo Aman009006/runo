@@ -671,3 +671,83 @@
     flex: 1;
   }
 }
+.budget-record-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  flex-shrink: 0;
+}
+
+.budget-action-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: #f8fafc;
+  transition: background .2s, color .2s;
+}
+
+.budget-action-icon.delete {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.budget-action-icon.delete:hover {
+  background: #fee2e2;
+}
+
+.budget-action-icon.restore {
+  color: #047857;
+  background: #ecfdf5;
+}
+
+.budget-action-icon.restore:hover {
+  background: #d1fae5;
+}
+
+.budget-action-icon:disabled {
+  opacity: .5;
+  cursor: wait;
+}
+
+@media(max-width:520px) {
+  .budget-record-top {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .budget-record-actions {
+    gap: 6px;
+  }
+
+  .budget-amount {
+    padding-left: 0;
+    font-size: 13px;
+  }
+}
+.budget-type.added {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.budget-type.deleted {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.budget-type.returned {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.budget-history-amount.returned {
+  color: #047857;
+}
+
+.budget-history-amount.added,
+.budget-history-amount.deleted {
+  color: #64748b;
+}

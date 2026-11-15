@@ -129,13 +129,14 @@ React.useEffect(() => {
       </header>
   {payment.status === "pending" && payment.qrCode && (
           <div className="online-cash-payment">
+            <div className="online-cash-payment-ornament">
             <img
               src={payment.qrCode}
               alt="QR-код оплаты О! Банк"
             />
           </div>
+          </div>
         )}
-        
       <section className="online-cash-content">
       
 

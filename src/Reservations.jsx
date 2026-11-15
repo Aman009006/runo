@@ -1173,6 +1173,62 @@ function ReservationListModal({
                       </div>
                     </div>
 
+                    <div className="reservation-history">
+
+                      <div className="reservation-history-item">
+                        <span>Дата создания</span>
+                        <strong>
+                          {formatDateTime(reservation.createdAt)}
+                        </strong>
+                      </div>
+
+                      <div className="reservation-history-item">
+                        <span>Последнее изменение</span>
+                        <strong>
+                          {formatDateTime(reservation.updatedAt)}
+                        </strong>
+                      </div>
+
+
+
+                      <div className="reservation-history-divider" />
+
+                      {(reservation.paymentHistory || []).map((payment, index) => {
+                        const paymentDetails = PAYMENT_METHODS.filter(
+                          (method) => Number(payment[method.key] || 0) > 0,
+                        );
+
+                        const amount = paymentDetails.reduce(
+                          (sum, method) => sum + Number(payment[method.key]),
+                          0,
+                        );
+
+                        return (
+                          <div className="reservation-payment-history-item" key={payment.id}>
+                            <div className="reservation-payment-history-top">
+                              <strong>
+                                {index === 0 ? "Первый платёж" : "Последующий платёж"}
+                              </strong>
+
+                              <strong>{formatMoney(amount)}</strong>
+                            </div>
+
+                            <div className="reservation-payment-history-method">
+                              {paymentDetails.map((method) => (
+                                <span key={method.key}>
+                                  {method.label}: {formatMoney(payment[method.key])}
+                                </span>
+                              ))}
+                            </div>
+
+                            <span className="reservation-payment-history-date">
+                              {formatDateTime(payment.createdAt)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
                     {reservation.comment && (
                       <div className="reservation-comment">
                         <strong>Комментарий:</strong>{" "}
@@ -1423,11 +1479,94 @@ function PaymentEditor({ reservation, onPayment }) {
   );
 }
 
+function formatDateTime(value) {
+  if (!value) return "Нет данных";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Нет данных";
+  }
+
+  return date.toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getFirstPaymentInfo(reservation) {
+  const firstPayment = [...(reservation.paymentHistory || [])]
+    .sort(
+      (a, b) =>
+        new Date(a.createdAt) - new Date(b.createdAt),
+    )[0];
+
+  if (!firstPayment) return null;
+
+  const payments = PAYMENT_METHODS
+    .filter((method) => Number(firstPayment[method.key] || 0) > 0)
+    .map((method) => ({
+      label: method.label,
+      amount: Number(firstPayment[method.key]),
+    }));
+
+  return {
+    date: firstPayment.createdAt,
+    type: firstPayment.type,
+    payments,
+    amount: payments.reduce(
+      (sum, payment) => sum + payment.amount,
+      0,
+    ),
+  };
+}
+
+function formatFirstPayment(payment) {
+  if (!payment || !payment.payments.length) {
+    return "Нет данных";
+  }
+
+  return payment.payments
+    .map(
+      (item) =>
+        `${item.label} — ${formatMoney(item.amount)}`,
+    )
+    .join(" + ");
+}
+
+function getPaymentDetails(payment) {
+  if (!payment) return "Нет данных";
+
+  if (payment.payments) {
+    const activePayments = PAYMENT_METHODS.filter(
+      (method) =>
+        Number(payment.payments[method.key] || 0) > 0,
+    );
+
+    if (activePayments.length > 1) {
+      return activePayments
+        .map(
+          (method) =>
+            `${method.label}: ${formatMoney(
+              payment.payments[method.key],
+            )}`,
+        )
+        .join(" · ");
+    }
+  }
+
+  return getPaymentMethodLabel(payment.method);
+}
+
 function ReservationPreviewModal({
   reservation,
   onClose,
   onEdit,
   onIssue,
+  branch
 }) {
   return (
     <div className="reservation-overlay">
@@ -1538,6 +1677,62 @@ function ReservationPreviewModal({
             </strong>
           </div>
 
+      <div className="reservation-history">
+
+  <div className="reservation-history-item">
+    <span>Дата создания</span>
+    <strong>
+      {formatDateTime(reservation.createdAt)}
+    </strong>
+  </div>
+
+  <div className="reservation-history-item">
+    <span>Последнее изменение</span>
+    <strong>
+      {formatDateTime(reservation.updatedAt)}
+    </strong>
+  </div>
+
+
+
+  <div className="reservation-history-divider" />
+
+  {(reservation.paymentHistory || []).map((payment, index) => {
+    const paymentDetails = PAYMENT_METHODS.filter(
+      (method) => Number(payment[method.key] || 0) > 0,
+    );
+
+    const amount = paymentDetails.reduce(
+      (sum, method) => sum + Number(payment[method.key]),
+      0,
+    );
+
+    return (
+      <div className="reservation-payment-history-item" key={payment.id}>
+        <div className="reservation-payment-history-top">
+          <strong>
+            {index === 0 ? "Первый платёж" : "Последующий платёж"}
+          </strong>
+
+          <strong>{formatMoney(amount)}</strong>
+        </div>
+
+        <div className="reservation-payment-history-method">
+          {paymentDetails.map((method) => (
+            <span key={method.key}>
+              {method.label}: {formatMoney(payment[method.key])}
+            </span>
+          ))}
+        </div>
+
+        <span className="reservation-payment-history-date">
+          {formatDateTime(payment.createdAt)}
+        </span>
+      </div>
+    );
+  })}
+</div>
+
           {reservation.comment && (
             <div className="preview-comment">
               <span>Комментарий</span>
@@ -1555,7 +1750,7 @@ function ReservationPreviewModal({
           </div>
         </div>
 
-        <div className="reservation-modal-footer">
+        {branch.id !== "bishkekteam" && (<div className="reservation-modal-footer">
           <button
             type="button"
             className="secondary-button"
@@ -1589,7 +1784,7 @@ function ReservationPreviewModal({
               </button>
             </>
           )}
-        </div>
+        </div>)}
       </div>
     </div>
   );
@@ -1601,7 +1796,10 @@ function Reservations({
   error: productsError,
   onRefreshProducts,
   onBack,
+  branch
 }) {
+
+  console.log("Reservations component rendered", branch);
   const [currentMonth, setCurrentMonth] = useState(
     getMonthStart(new Date()),
   );
@@ -2018,7 +2216,7 @@ const response = await fetch(
               Обновить
             </button>
 
-            <button
+            {branch.id !== "bishkekteam" && (<button
               type="button"
               className="primary-button"
               onClick={() =>
@@ -2027,7 +2225,7 @@ const response = await fetch(
             >
               <Plus size={18} />
               Добавить бронь
-            </button>
+            </button>)}
           </div>
         </div>
 
@@ -2252,7 +2450,7 @@ const response = await fetch(
                     </div>
 
                     <div className="calendar-day-footer">
-                      <button
+                     {branch.id !== "bishkekteam" && ( <button
                         type="button"
                         className="day-add-button"
                         onClick={() =>
@@ -2261,7 +2459,7 @@ const response = await fetch(
                       >
                         <Plus size={15} />
                         Добавить бронь
-                      </button>
+                      </button>)}
 
                       {dayReservations.length >
                         0 && (
@@ -2337,6 +2535,7 @@ const response = await fetch(
           }
           onEdit={openEdit}
           onIssue={handleIssue}
+          branch={branch}
         />
       )}
 
