@@ -468,11 +468,6 @@ function CartDrawer({
                 />
               </label>
 
-              <div className="shop-checkout-total">
-                <span>{t("К оплате", "Төлөнө турган сумма")}</span>
-                <strong>{formatPrice(total)}</strong>
-              </div>
-
               {error && (
                 <p className="shop-checkout-error">
                   {error}
@@ -486,7 +481,7 @@ function CartDrawer({
               >
                 {sending
                   ? t("Отправляем заказ...", "Заказ жөнөтүлүүдө...")
-                  : t("Подтвердить заказ", "Заказды ырастоо")}
+                  : t("Отправить заявку", "Заказды ырастоо")}
               </button>
             </form>
           </div>
