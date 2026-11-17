@@ -560,30 +560,8 @@ const filteredProducts = useMemo(() => {
 
 
 const printReceipt = async (order) => {
-  const COLS = 32; // 58 мм = 32 символа
-
   const clean = (s) => String(s ?? "").replace(/[\u00A0\u202F]/g, " ");
   const money = (v) => clean(formatMoney(v));
-
-  const wrap = (s) => {
-    const out = [];
-    let str = clean(s);
-    while (str.length > COLS) {
-      let cut = str.lastIndexOf(" ", COLS);
-      if (cut <= 0) cut = COLS;
-      out.push(str.slice(0, cut).trimEnd());
-      str = str.slice(cut).trimStart();
-    }
-    out.push(str);
-    return out;
-  };
-
-  const lr = (l, r) => {
-    l = clean(l);
-    r = clean(r);
-    const space = COLS - l.length - r.length;
-    return space > 0 ? l + " ".repeat(space) + r : l + " " + r;
-  };
 
   const labels = {
     cash: "Наличные",
@@ -595,41 +573,35 @@ const printReceipt = async (order) => {
     obank_qr: "О! Банк QR",
   };
 
-  const line = "-".repeat(COLS);
-  const lines = [
-    "RUNO".padStart(Math.floor((COLS + 4) / 2)),
-    line,
-    ...wrap(`Номер: ${order.orderId}`),
-    clean(order.date),
-    ...(order.salesperson ? wrap(`Продавец: ${order.salesperson}`) : []),
-    line,
-  ];
-
-  order.items.forEach((item) => {
-    lines.push(...wrap(item.name));
-    lines.push(
-      lr(
-        `${item.quantity} x ${money(item.price)}`,
-        money(Number(item.price || 0) * item.quantity),
-      ),
-    );
-  });
-
-  lines.push(line);
-  lines.push(lr("ИТОГО", money(order.total)));
-  lines.push(line);
-  lines.push("Оплата:");
-  Object.entries(order.payments)
-    .filter(([, amount]) => Number(amount) > 0)
-    .forEach(([method, amount]) => {
-      lines.push(lr(labels[method] || method, money(amount)));
-    });
+  const receipt = {
+    header: [
+      { label: "Номер:", value: order.orderId },
+      { label: "", value: clean(order.date) },
+      ...(order.salesperson
+        ? [{ label: "Продавец:", value: clean(order.salesperson) }]
+        : []),
+    ],
+    items: order.items.map((item) => ({
+      name: clean(item.name),
+      left: `${item.quantity} × ${money(item.price)}`,
+      right: money(Number(item.price || 0) * item.quantity),
+    })),
+    totalLabel: "Итого",
+    total: money(order.total),
+    paymentsTitle: "Оплата",
+    payments: Object.entries(order.payments)
+      .filter(([, amount]) => Number(amount) > 0)
+      .map(([method, amount]) => ({
+        label: labels[method] || method,
+        value: money(amount),
+      })),
+  };
 
   try {
     await fetch("http://localhost:9101/print", {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ text: lines.join("\n") }),
+      body: JSON.stringify({ receipt }),
     });
   } catch (err) {
     console.error("Не удалось отправить чек на печать:", err);
