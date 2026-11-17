@@ -67,7 +67,6 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose, branch 
       ws.send(JSON.stringify({ type, state }));
     }
   };
-
   // Подключение к серверу (экран покупателя получает данные через него)
   useEffect(() => {
     if (!branch?.id) return;
@@ -560,127 +559,82 @@ const filteredProducts = useMemo(() => {
   };
 
 
-  const RECEIPT_WIDTH_MM = 47; // печатная область POS58 (бумага 58 мм)
+const printReceipt = async (order) => {
+  const COLS = 32; // 58 мм = 32 символа
 
-const printReceipt = (order) =>
-  new Promise((resolve) => {
-    const labels = {
-      cash: "Наличные",
-      card: "Карта",
-      credit: "Кредит",
-      delivery: "Аманат",
-      online_qr: "Онлайн QR",
-      cashbox: "Касса",
-      obank_qr: "О! Банк QR",
-    };
-    const esc = (s) =>
-      String(s ?? "").replace(
-        /[&<>"']/g,
-        (c) =>
-          ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
-      );
+  const clean = (s) => String(s ?? "").replace(/[\u00A0\u202F]/g, " ");
+  const money = (v) => clean(formatMoney(v));
 
-    const itemsHtml = order.items
-      .map(
-        (item) => `
-        <div class="item">
-          <div class="name">${esc(item.name)}</div>
-          <div class="row">
-            <span>${item.quantity} × ${esc(formatMoney(item.price))}</span>
-            <strong>${esc(formatMoney(Number(item.price || 0) * item.quantity))}</strong>
-          </div>
-        </div>`,
-      )
-      .join("");
-
-    const paymentsHtml = Object.entries(order.payments)
-      .filter(([, amount]) => Number(amount) > 0)
-      .map(
-        ([method, amount]) => `
-        <div class="row">
-          <span>${esc(labels[method] || method)}</span>
-          <strong>${esc(formatMoney(amount))}</strong>
-        </div>`,
-      )
-      .join("");
-
-    const logoUrl = new URL(runoLogo, window.location.href).href;
-
-    const html = `<!doctype html>
-<html><head><meta charset="utf-8">
-<style id="page-style">@page { size: ${RECEIPT_WIDTH_MM}mm auto; margin: 0; }</style>
-<style>
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: #fff; }
-  body {
-    width: ${RECEIPT_WIDTH_MM}mm;
-    padding: 1mm 1.5mm 3mm;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 11px;
-    color: #000;
-  }
-  .logo { display: block; margin: 0 auto 6px; max-width: 28mm; }
-  .meta { margin-bottom: 6px; line-height: 1.4; }
-  .row { display: flex; justify-content: space-between; gap: 6px; }
-  .item { padding: 4px 0; border-bottom: 1px dashed #000; }
-  .name { font-weight: bold; word-break: break-word; }
-  .total { display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px; font-weight: bold; }
-  .pay { margin-top: 8px; padding-top: 6px; border-top: 1px dashed #000; }
-  .pay-title { font-weight: bold; margin-bottom: 4px; }
-</style></head>
-<body>
-  <img class="logo" id="logo" src="${logoUrl}" alt="">
-  <div class="meta">
-    <div>Номер: <strong>${esc(order.orderId)}</strong></div>
-    <div>${esc(order.date)}</div>
-    ${order.salesperson ? `<div>Продавец: <strong>${esc(order.salesperson)}</strong></div>` : ""}
-  </div>
-  ${itemsHtml}
-  <div class="total"><span>Итого</span><span>${esc(formatMoney(order.total))}</span></div>
-  <div class="pay">
-    <div class="pay-title">Оплата</div>
-    ${paymentsHtml}
-  </div>
-</body></html>`;
-
-    const iframe = document.createElement("iframe");
-    iframe.style.cssText = `position:fixed;left:-10000px;top:0;width:${RECEIPT_WIDTH_MM}mm;height:2000px;border:0;visibility:hidden;`;
-    document.body.appendChild(iframe);
-
-    const cleanup = () => {
-      setTimeout(() => {
-        iframe.remove();
-        resolve();
-      }, 500);
-    };
-
-    const doc = iframe.contentDocument;
-    doc.open();
-    doc.write(html);
-    doc.close();
-
-    const doPrint = () => {
-      // динамическая высота чека под содержимое
-      const heightPx = doc.body.scrollHeight;
-      const heightMm = Math.ceil((heightPx * 25.4) / 96) + 2;
-      doc.getElementById("page-style").textContent =
-        `@page { size: ${RECEIPT_WIDTH_MM}mm ${heightMm}mm; margin: 0; }`;
-
-      const win = iframe.contentWindow;
-      win.onafterprint = cleanup;
-      win.focus();
-      win.print();
-      setTimeout(cleanup, 60000); // страховка
-    };
-
-    const logo = doc.getElementById("logo");
-    if (logo && !logo.complete) {
-      logo.onload = doPrint;
-      logo.onerror = doPrint;
-    } else {
-      setTimeout(doPrint, 100);
+  const wrap = (s) => {
+    const out = [];
+    let str = clean(s);
+    while (str.length > COLS) {
+      let cut = str.lastIndexOf(" ", COLS);
+      if (cut <= 0) cut = COLS;
+      out.push(str.slice(0, cut).trimEnd());
+      str = str.slice(cut).trimStart();
     }
+    out.push(str);
+    return out;
+  };
+
+  const lr = (l, r) => {
+    l = clean(l);
+    r = clean(r);
+    const space = COLS - l.length - r.length;
+    return space > 0 ? l + " ".repeat(space) + r : l + " " + r;
+  };
+
+  const labels = {
+    cash: "Наличные",
+    card: "Карта",
+    credit: "Кредит",
+    delivery: "Аманат",
+    online_qr: "Онлайн QR",
+    cashbox: "Касса",
+    obank_qr: "О! Банк QR",
+  };
+
+  const line = "-".repeat(COLS);
+  const lines = [
+    "RUNO".padStart(Math.floor((COLS + 4) / 2)),
+    line,
+    ...wrap(`Номер: ${order.orderId}`),
+    clean(order.date),
+    ...(order.salesperson ? wrap(`Продавец: ${order.salesperson}`) : []),
+    line,
+  ];
+
+  order.items.forEach((item) => {
+    lines.push(...wrap(item.name));
+    lines.push(
+      lr(
+        `${item.quantity} x ${money(item.price)}`,
+        money(Number(item.price || 0) * item.quantity),
+      ),
+    );
   });
+
+  lines.push(line);
+  lines.push(lr("ИТОГО", money(order.total)));
+  lines.push(line);
+  lines.push("Оплата:");
+  Object.entries(order.payments)
+    .filter(([, amount]) => Number(amount) > 0)
+    .forEach(([method, amount]) => {
+      lines.push(lr(labels[method] || method, money(amount)));
+    });
+
+  try {
+    await fetch("http://localhost:9101/print", {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ text: lines.join("\n") }),
+    });
+  } catch (err) {
+    console.error("Не удалось отправить чек на печать:", err);
+  }
+};
 
 
  const handleCheckout = async () => {
