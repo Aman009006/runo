@@ -595,6 +595,7 @@ const printReceipt = async (order) => {
         label: labels[method] || method,
         value: money(amount),
       })),
+    footer: "Спасибо за покупку!",
   };
 
   try {
