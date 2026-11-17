@@ -886,6 +886,7 @@ if (pathname === "/statisticForAdmin") {
         error={error}
         onRefresh={fetchMoySkladProducts}
         onClose={() => setIsCashierOpen(false)}
+        branch={branch}
       />
 
       {/* КНОПКА ПЕРСОНАЛА */}

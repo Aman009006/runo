@@ -13,10 +13,13 @@ import {
   Receipt,
 } from "lucide-react";
 import API_URL from "./config.js";
+import runoLogo from "./runo.PNG";
+
 const SHIFT_STORAGE_KEY = "moysklad_retail_shift_id";
-const ONLINE_CASH_CHANNEL = "runo-online-cash";
-const ONLINE_CASH_STORAGE_KEY = "runo-online-cash-state";
-function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
+const ONLINE_CASH_TERMINAL_ID = "main";
+const WS_URL = API_URL.replace(/^http/, "ws");
+
+function Cashier({ isOpen, products, loading, error, onRefresh, onClose, branch }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [cart, setCart] = useState([]);
@@ -54,68 +57,86 @@ function Cashier({ isOpen, products, loading, error, onRefresh, onClose }) {
   const totalSom = subtotalKopecks;
 
 
-const onlineCashChannelRef = useRef(null);
+  const wsRef = useRef(null);
+  const lastStateRef = useRef({ cart: null, payment: null });
 
-const sendOnlineCashPayment = (paymentData) => {
-  const message = {
-    type: "PAYMENT_UPDATE",
-    ...paymentData,
-    updatedAt: Date.now(),
+  const wsSend = (type, state) => {
+    lastStateRef.current[type] = state;
+    const ws = wsRef.current;
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type, state }));
+    }
   };
 
-  onlineCashChannelRef.current?.postMessage(message);
+  // Подключение к серверу (экран покупателя получает данные через него)
+  useEffect(() => {
+    if (!branch?.id) return;
 
-  try {
-    localStorage.setItem(
-      "runo-online-cash-payment-state",
-      JSON.stringify(message),
-    );
-  } catch (error) {
-    console.error("Ошибка передачи статуса оплаты:", error);
-  }
-};
+    let closed = false;
+    let retryTimer;
 
-// Канал связи со вторым экраном
-useEffect(() => {
-  if (typeof BroadcastChannel === "undefined") return;
+    const connect = () => {
+      const ws = new WebSocket(
+        `${WS_URL}/ws/online-cash?role=cashier` +
+          `&branchId=${encodeURIComponent(branch.id)}` +
+          `&terminalId=${ONLINE_CASH_TERMINAL_ID}`,
+      );
+      wsRef.current = ws;
 
-  const channel = new BroadcastChannel(ONLINE_CASH_CHANNEL);
-  onlineCashChannelRef.current = channel;
+      // после (пере)подключения отправляем последнее состояние
+      ws.onopen = () => {
+        const { cart, payment } = lastStateRef.current;
+        if (cart) ws.send(JSON.stringify({ type: "cart", state: cart }));
+        if (payment) ws.send(JSON.stringify({ type: "payment", state: payment }));
+      };
 
-  return () => {
-    channel.close();
-    onlineCashChannelRef.current = null;
+      ws.onclose = () => {
+        if (!closed) retryTimer = setTimeout(connect, 2000);
+      };
+    };
+
+    connect();
+
+    return () => {
+      closed = true;
+      clearTimeout(retryTimer);
+      wsRef.current?.close();
+      wsRef.current = null;
+    };
+  }, [branch?.id]);
+
+  // Статус оплаты на экран покупателя
+  const sendOnlineCashPayment = (paymentData) => {
+    wsSend("payment", paymentData);
+
+    // через 5 секунд после результата возвращаем экран в обычный режим
+    if (paymentData.status === "success" || paymentData.status === "failed") {
+      setTimeout(() => {
+        wsSend("payment", {
+          status: "idle",
+          qrCode: "",
+          amount: 0,
+          paymentId: "",
+        });
+      }, 5000);
+    }
   };
-}, []);
 
-// Передаём актуальную корзину на второй экран
-useEffect(() => {
-  const snapshot = {
-    type: "CART_UPDATE",
-    isOpen: Boolean(isOpen),
-    items: isOpen
-      ? cart.map((item) => ({
-          id: item.id,
-          name: item.name || "Без названия",
-          price: Number(item.price || 0),
-          quantity: Number(item.qty || 0),
-        }))
-      : [],
-    total: isOpen ? Number(totalSom || 0) : 0,
-    updatedAt: Date.now(),
-  };
-
-  try {
-    localStorage.setItem(
-      ONLINE_CASH_STORAGE_KEY,
-      JSON.stringify(snapshot),
-    );
-  } catch (error) {
-    console.error("Не удалось сохранить состояние онлайн-кассы:", error);
-  }
-
-  onlineCashChannelRef.current?.postMessage(snapshot);
-}, [cart, totalSom, isOpen]);
+  // Корзина на экран покупателя
+  useEffect(() => {
+    wsSend("cart", {
+      isOpen: Boolean(isOpen),
+      items: isOpen
+        ? cart.map((item) => ({
+            id: item.id,
+            name: item.name || "Без названия",
+            price: Number(item.price || 0),
+            quantity: Number(item.qty || 0),
+          }))
+        : [],
+      total: isOpen ? Number(totalSom || 0) : 0,
+    });
+  }, [cart, totalSom, isOpen]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -537,6 +558,131 @@ const filteredProducts = useMemo(() => {
       obank_qr: Number(paymentAmounts.obank_qr || 0),
     };
   };
+
+
+  const RECEIPT_WIDTH_MM = 47; // печатная область POS58 (бумага 58 мм)
+
+const printReceipt = (order) =>
+  new Promise((resolve) => {
+    const labels = {
+      cash: "Наличные",
+      card: "Карта",
+      credit: "Кредит",
+      delivery: "Аманат",
+      online_qr: "Онлайн QR",
+      cashbox: "Касса",
+      obank_qr: "О! Банк QR",
+    };
+    const esc = (s) =>
+      String(s ?? "").replace(
+        /[&<>"']/g,
+        (c) =>
+          ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+      );
+
+    const itemsHtml = order.items
+      .map(
+        (item) => `
+        <div class="item">
+          <div class="name">${esc(item.name)}</div>
+          <div class="row">
+            <span>${item.quantity} × ${esc(formatMoney(item.price))}</span>
+            <strong>${esc(formatMoney(Number(item.price || 0) * item.quantity))}</strong>
+          </div>
+        </div>`,
+      )
+      .join("");
+
+    const paymentsHtml = Object.entries(order.payments)
+      .filter(([, amount]) => Number(amount) > 0)
+      .map(
+        ([method, amount]) => `
+        <div class="row">
+          <span>${esc(labels[method] || method)}</span>
+          <strong>${esc(formatMoney(amount))}</strong>
+        </div>`,
+      )
+      .join("");
+
+    const logoUrl = new URL(runoLogo, window.location.href).href;
+
+    const html = `<!doctype html>
+<html><head><meta charset="utf-8">
+<style id="page-style">@page { size: ${RECEIPT_WIDTH_MM}mm auto; margin: 0; }</style>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  body {
+    width: ${RECEIPT_WIDTH_MM}mm;
+    padding: 1mm 1.5mm 3mm;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+    color: #000;
+  }
+  .logo { display: block; margin: 0 auto 6px; max-width: 28mm; }
+  .meta { margin-bottom: 6px; line-height: 1.4; }
+  .row { display: flex; justify-content: space-between; gap: 6px; }
+  .item { padding: 4px 0; border-bottom: 1px dashed #000; }
+  .name { font-weight: bold; word-break: break-word; }
+  .total { display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px; font-weight: bold; }
+  .pay { margin-top: 8px; padding-top: 6px; border-top: 1px dashed #000; }
+  .pay-title { font-weight: bold; margin-bottom: 4px; }
+</style></head>
+<body>
+  <img class="logo" id="logo" src="${logoUrl}" alt="">
+  <div class="meta">
+    <div>Номер: <strong>${esc(order.orderId)}</strong></div>
+    <div>${esc(order.date)}</div>
+    ${order.salesperson ? `<div>Продавец: <strong>${esc(order.salesperson)}</strong></div>` : ""}
+  </div>
+  ${itemsHtml}
+  <div class="total"><span>Итого</span><span>${esc(formatMoney(order.total))}</span></div>
+  <div class="pay">
+    <div class="pay-title">Оплата</div>
+    ${paymentsHtml}
+  </div>
+</body></html>`;
+
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = `position:fixed;left:-10000px;top:0;width:${RECEIPT_WIDTH_MM}mm;height:2000px;border:0;visibility:hidden;`;
+    document.body.appendChild(iframe);
+
+    const cleanup = () => {
+      setTimeout(() => {
+        iframe.remove();
+        resolve();
+      }, 500);
+    };
+
+    const doc = iframe.contentDocument;
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    const doPrint = () => {
+      // динамическая высота чека под содержимое
+      const heightPx = doc.body.scrollHeight;
+      const heightMm = Math.ceil((heightPx * 25.4) / 96) + 2;
+      doc.getElementById("page-style").textContent =
+        `@page { size: ${RECEIPT_WIDTH_MM}mm ${heightMm}mm; margin: 0; }`;
+
+      const win = iframe.contentWindow;
+      win.onafterprint = cleanup;
+      win.focus();
+      win.print();
+      setTimeout(cleanup, 60000); // страховка
+    };
+
+    const logo = doc.getElementById("logo");
+    if (logo && !logo.complete) {
+      logo.onload = doPrint;
+      logo.onerror = doPrint;
+    } else {
+      setTimeout(doPrint, 100);
+    }
+  });
+
+
  const handleCheckout = async () => {
   if (isCheckoutProcessing || cart.length === 0) {
     return;
@@ -794,7 +940,7 @@ const filteredProducts = useMemo(() => {
 
     setLastOrder(orderData);
     setShowReceiptModal(true);
-
+printReceipt(orderData);
     clearCart();
     clearPaymentAmounts();
 
@@ -1957,6 +2103,7 @@ const filteredProducts = useMemo(() => {
       {/* RECEIPT MODAL */}
       {showReceiptModal && lastOrder && (
         <div
+        onClick={() => setShowReceiptModal(false)}
           style={{
             position: "fixed",
             inset: 0,
@@ -1981,6 +2128,14 @@ const filteredProducts = useMemo(() => {
               padding: isMobile ? "16px" : "24px",
             }}
           >
+              <img
+                                src={runoLogo}
+                                alt="Logo"
+                                style={{
+                                  maxWidth: "100px",
+                                  marginBottom: "12px",
+                                }}
+                              />
             <div
               style={{
                 display: "flex",
@@ -1989,7 +2144,8 @@ const filteredProducts = useMemo(() => {
                 marginBottom: "18px",
               }}
             >
-              <div
+                 
+              {/* <div
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -1997,6 +2153,7 @@ const filteredProducts = useMemo(() => {
                 }}
               >
                 <Receipt size={21} />
+
                 <h2
                   style={{
                     margin: 0,
@@ -2005,8 +2162,8 @@ const filteredProducts = useMemo(() => {
                 >
                   Чек
                 </h2>
-              </div>
-              <button
+              </div> */}
+              {/* <button
                 onClick={() => setShowReceiptModal(false)}
                 style={{
                   width: "34px",
@@ -2020,7 +2177,7 @@ const filteredProducts = useMemo(() => {
                 }}
               >
                 <X size={17} />
-              </button>
+              </button> */}
             </div>
             <div
               style={{
@@ -2077,7 +2234,7 @@ const filteredProducts = useMemo(() => {
                 marginTop: "14px",
               }}
             >
-              <div
+              {/* <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
@@ -2087,7 +2244,7 @@ const filteredProducts = useMemo(() => {
               >
                 <span>Подытог</span>
                 <span>{formatMoney(lastOrder.subtotal)}</span>
-              </div>
+              </div> */}
               <div
                 style={{
                   display: "flex",
@@ -2146,7 +2303,7 @@ const filteredProducts = useMemo(() => {
                 );
               })}
             </div>
-            <button
+            {/* <button
               onClick={() => setShowReceiptModal(false)}
               style={{
                 width: "100%",
@@ -2160,7 +2317,7 @@ const filteredProducts = useMemo(() => {
               }}
             >
               Закрыть
-            </button>
+            </button> */}
           </div>
         </div>
       )}
